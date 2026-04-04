@@ -1,6 +1,6 @@
 node_modules/
 .env
-# crm.db  ← temporarily included for first Railway deploy
+crm.db
 public/uploads/
 .DS_Store
 server.log
