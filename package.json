@@ -4,7 +4,7 @@
   "description": "CRM-verktyg för Jonna — teater- och filmbranschen",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "sh start.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
