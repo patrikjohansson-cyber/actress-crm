@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const basicAuth = require('express-basic-auth');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -10,9 +11,14 @@ const { simpleParser } = require('mailparser');
 const db = require('./db');
 
 // Ensure uploads dir exists
-fs.mkdirSync(path.join(__dirname, 'public', 'uploads'), { recursive: true });
+const uploadsDir = process.env.UPLOADS_PATH || path.join(__dirname, 'public', 'uploads');
+fs.mkdirSync(uploadsDir, { recursive: true });
 
 const app = express();
+app.use(basicAuth({
+  users: { [process.env.AUTH_USER || 'jonna']: process.env.AUTH_PASSWORD || 'changeme' },
+  challenge: true
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.text({ limit: '500mb', type: 'text/plain' }));
 app.use(express.static(path.join(__dirname, 'public')));
