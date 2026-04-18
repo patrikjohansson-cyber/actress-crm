@@ -6834,19 +6834,24 @@ updateProfileCompleteness();
 // ── Berika grupp ──────────────────────────────────────────────
 let _bulkEnrichAbort = false;
 
+function updateBulkEnrichCounts() {
+  const all = window._bulkEnrichContacts || [];
+  const prio = document.getElementById('bulk-enrich-priority')?.value;
+  const filtered = prio ? all.filter(c => String(c.priority) === prio) : all;
+  document.getElementById('bulk-enrich-no-info').textContent  = filtered.filter(c => !c.enriched_at).length;
+  document.getElementById('bulk-enrich-no-photo').textContent = filtered.filter(c => !c.photo_url).length;
+}
+
 async function openBulkEnrichModal() {
   _bulkEnrichAbort = false;
   const contacts = await api('GET', '/api/contacts');
-  const noInfo  = contacts.filter(c => !c.enriched_at).length;
-  const noPhoto = contacts.filter(c => !c.photo_url).length;
-  document.getElementById('bulk-enrich-no-info').textContent  = noInfo;
-  document.getElementById('bulk-enrich-no-photo').textContent = noPhoto;
+  window._bulkEnrichContacts = contacts;
+  document.getElementById('bulk-enrich-priority').value = '';
   document.getElementById('bulk-enrich-progress').classList.add('hidden');
   document.getElementById('bulk-enrich-start-btn').disabled = false;
   document.getElementById('bulk-enrich-start-btn').textContent = 'Starta';
   document.getElementById('bulk-enrich-modal').classList.remove('hidden');
-  // Spara kontakter för att slippa hämta igen
-  window._bulkEnrichContacts = contacts;
+  updateBulkEnrichCounts();
 }
 
 async function startBulkEnrich() {
@@ -6855,8 +6860,10 @@ async function startBulkEnrich() {
   if (!doInfo && !doPhoto) { toast('Välj minst ett alternativ', 'error'); return; }
 
   const all = window._bulkEnrichContacts || [];
+  const prio = document.getElementById('bulk-enrich-priority')?.value;
+  const filtered = prio ? all.filter(c => String(c.priority) === prio) : all;
   const queue = [];
-  for (const c of all) {
+  for (const c of filtered) {
     if (doInfo  && !c.enriched_at) queue.push({ id: c.id, name: c.name, type: 'info' });
     if (doPhoto && !c.photo_url)   queue.push({ id: c.id, name: c.name, type: 'photo' });
   }
@@ -6898,7 +6905,23 @@ async function startBulkEnrich() {
       <div style="font-family:var(--font-serif);font-size:22px;color:var(--ink);">Berika grupp</div>
       <button onclick="document.getElementById('bulk-enrich-modal').classList.add('hidden');_bulkEnrichAbort=true;" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--soft);">✕</button>
     </div>
-    <p class="t-small" style="color:var(--soft);margin-bottom:20px;">Hoppar automatiskt över kontakter som redan har respektive data.</p>
+    <p class="t-small" style="color:var(--soft);margin-bottom:16px;">Hoppar automatiskt över kontakter som redan har respektive data.</p>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:11px;font-family:var(--font-mono);letter-spacing:1px;color:var(--soft);text-transform:uppercase;display:block;margin-bottom:6px;">Prioritetsnivå</label>
+      <select id="bulk-enrich-priority" class="filter-select" style="width:100%;" onchange="updateBulkEnrichCounts()">
+        <option value="">Alla nivåer</option>
+        <option value="9">9 — Varm</option>
+        <option value="8">8</option>
+        <option value="7">7</option>
+        <option value="6">6</option>
+        <option value="5">5 — Neutral</option>
+        <option value="4">4</option>
+        <option value="3">3</option>
+        <option value="2">2</option>
+        <option value="1">1 — Kall</option>
+      </select>
+    </div>
 
     <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
