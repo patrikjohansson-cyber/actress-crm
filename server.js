@@ -1611,7 +1611,7 @@ app.post('/api/contacts/:id/photos', (req, res) => {
     const base64 = data.replace(/^data:image\/\w+;base64,/, '');
     const ext = data.match(/^data:image\/(\w+);/)?.[1] || 'jpg';
     const filename = `${req.params.id}-${Date.now()}.${ext}`;
-    fs.writeFileSync(path.join(__dirname, 'public', 'uploads', filename), Buffer.from(base64, 'base64'));
+    fs.writeFileSync(path.join(uploadsDir, filename), Buffer.from(base64, 'base64'));
     photoUrl = `/uploads/${filename}`;
   }
   if (!photoUrl) return res.status(400).json({ error: 'url eller data krävs' });
@@ -1655,7 +1655,7 @@ Om du inte hittar någon bild, svara: {"url":null,"source":""}`;
     const ext = contentType.includes('png') ? 'png' : 'jpg';
     const filename = `${req.params.id}-ai-${Date.now()}.${ext}`;
     const buffer = Buffer.from(await imgResp.arrayBuffer());
-    fs.writeFileSync(path.join(__dirname, 'public', 'uploads', filename), buffer);
+    fs.writeFileSync(path.join(uploadsDir, filename), buffer);
     const photoUrl = `/uploads/${filename}`;
 
     const result = db.addContactPhoto(req.params.id, photoUrl, source || 'ai');
@@ -1714,7 +1714,7 @@ app.post('/api/jonna/photo', (req, res) => {
   const base64 = data.replace(/^data:image\/\w+;base64,/, '');
   const ext = data.match(/^data:image\/(\w+);/)?.[1] || 'jpg';
   const filename = `jonna_photo_${Date.now()}.${ext}`;
-  fs.writeFileSync(path.join(__dirname, 'public', 'uploads', filename), Buffer.from(base64, 'base64'));
+  fs.writeFileSync(path.join(uploadsDir, filename), Buffer.from(base64, 'base64'));
   const url = `/uploads/${filename}`;
   db.setJonnaKey('photo', url);
   res.json({ url });
