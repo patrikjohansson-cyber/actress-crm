@@ -128,8 +128,8 @@
     .profile-strength-wrap { padding: 6px 12px 0; }
     .profile-strength-label { display: flex; justify-content: space-between; margin-bottom: 4px; }
     .profile-strength-label span { font-family: var(--font-mono); font-size: 9px; letter-spacing: 1px; color: rgba(42,31,10,0.85); font-weight: 600; }
-    .profile-strength-track { height: 2px; background: rgba(42,31,10,0.15); }
-    .profile-strength-fill { height: 2px; transition: width 0.5s ease; }
+    .profile-strength-track { height: 4px; background: rgba(42,31,10,0.15); border-radius: 2px; }
+    .profile-strength-fill { height: 4px; transition: width 0.5s ease; border-radius: 2px; }
 
     /* Nav */
     #sidebar nav {
@@ -439,7 +439,7 @@
       border: 1px solid currentColor;
       border-radius: 4px;
     }
-    .badge .badge-icon { font-size: 11px; line-height: 1; }
+    .badge .badge-icon { font-size: 11px; line-height: 1; vertical-align: middle; }
 
     .badge-rust { color: var(--rust); border-color: var(--rust); background: rgba(178,74,42,0.06); }
     .badge-marine { color: var(--marine); border-color: var(--marine); background: rgba(42,74,110,0.06); }
