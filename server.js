@@ -1907,6 +1907,8 @@ const SCRAPE_SITES = [
   { url: 'https://www.kulturjobb.se/', name: 'kulturjobb.se' },
   { url: 'https://www.teateralliansen.se/lediga-jobb', name: 'teateralliansen.se' },
   { url: 'https://www.sceneochfilm.se/jobb', name: 'sceneochfilm.se' },
+  { url: 'https://filmcafe.se/jobb/', name: 'filmcafe.se' },
+  { url: 'https://sv.stagepool.com/skadespelare/102300/skadespelare_sokes_till_oppen_casting', name: 'stagepool.com' },
 ];
 
 async function scrapeSite({ url, name }) {
