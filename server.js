@@ -1634,31 +1634,82 @@ app.post('/api/contacts/:id/fetch-photo', async (req, res) => {
   const contact = db.getContact(req.params.id);
   if (!contact) return res.status(404).json({ error: 'Kontakt saknas' });
 
-  const desc = [contact.name, contact.role, contact.organization].filter(Boolean).join(', ');
-  const prompt = `Hitta en profilbild (URL till en JPG/PNG-bild) för: ${desc}.
-Sök på t.ex. teaterns hemsida, LinkedIn, IMDB, SVT, Dramaten, svenska kulturinstitutioner.
-Svara ENBART med en JSON-rad: {"url":"https://...","source":"var du hittade den"}
-Om du inte hittar någon bild, svara: {"url":null,"source":""}`;
-
-  try {
-    const text = await claudeSearch(prompt, 500, 'claude-haiku-4-5-20251001', false);
-    const m = text.match(/\{[^}]+\}/);
-    if (!m) return res.json({ url: null });
-    const { url, source } = JSON.parse(m[0]);
-    if (!url) return res.json({ url: null });
-
-    // Ladda ner bilden och spara lokalt
-    const imgResp = await fetch(url);
-    if (!imgResp.ok) return res.json({ url: null });
+  // Försöker ladda ner och spara en bild-URL
+  const downloadAndSave = async (imgUrl) => {
+    const imgResp = await fetch(imgUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) });
+    if (!imgResp.ok) return null;
     const contentType = imgResp.headers.get('content-type') || '';
-    if (!contentType.startsWith('image/')) return res.json({ url: null });
+    if (!contentType.startsWith('image/')) return null;
     const ext = contentType.includes('png') ? 'png' : 'jpg';
     const filename = `${req.params.id}-ai-${Date.now()}.${ext}`;
     const buffer = Buffer.from(await imgResp.arrayBuffer());
     fs.writeFileSync(path.join(uploadsDir, filename), buffer);
-    const photoUrl = `/uploads/${filename}`;
+    return `/uploads/${filename}`;
+  };
 
-    const result = db.addContactPhoto(req.params.id, photoUrl, source || 'ai');
+  try {
+    // Steg 1: Skrapa hemsida och URL:er från anteckningar
+    const notesText = contact.notes || '';
+    const urlsInNotes = [...notesText.matchAll(/https?:\/\/[^\s)>\]"]+/g)].map(m => m[0]).slice(0, 3);
+    const urlsToScrape = [contact.website, ...urlsInNotes].filter(Boolean);
+    const firstName = contact.name.split(' ')[0].toLowerCase();
+
+    const scrapeForPhoto = async (pageUrl) => {
+      try {
+        const r = await fetch(pageUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) });
+        if (!r.ok) return null;
+        const html = await r.text();
+        const $ = cheerio.load(html);
+
+        // og:image är mest tillförlitlig för personhemsidor
+        const ogImage = $('meta[property="og:image"]').attr('content');
+        if (ogImage) return { url: ogImage.startsWith('http') ? ogImage : new URL(ogImage, pageUrl).href, source: pageUrl };
+
+        const twitterImage = $('meta[name="twitter:image"]').attr('content');
+        if (twitterImage) return { url: twitterImage.startsWith('http') ? twitterImage : new URL(twitterImage, pageUrl).href, source: pageUrl };
+
+        // <img> vars alt-text innehåller personens förnamn
+        let found = null;
+        $('img').each((_, el) => {
+          if (found) return;
+          const alt = ($(el).attr('alt') || '').toLowerCase();
+          const src = $(el).attr('src') || '';
+          if (alt.includes(firstName) && src && !src.match(/logo|icon|banner/i)) {
+            found = { url: src.startsWith('http') ? src : new URL(src, pageUrl).href, source: pageUrl };
+          }
+        });
+        return found;
+      } catch { return null; }
+    };
+
+    let photoResult = null;
+    for (const pageUrl of urlsToScrape) {
+      photoResult = await scrapeForPhoto(pageUrl);
+      if (photoResult) break;
+    }
+
+    // Steg 2: Fallback — web search med Claude
+    if (!photoResult) {
+      const desc = [contact.name, contact.role, contact.organization].filter(Boolean).join(', ');
+      const prompt = `Hitta EN profilbild-URL (JPG/PNG) för personen: ${desc}.
+Sök på teaterns hemsida, LinkedIn, IMDB, SVT, Dramaten eller svenska kulturinstitutioner.
+Svara ENBART med en JSON-rad: {"url":"https://...","source":"var du hittade den"}
+Hittar du ingen bild, svara: {"url":null,"source":""}
+Returnera bara EN bild — den bäst matchande. Sluta söka när du hittat en.`;
+      const text = await claudeSearch(prompt, 500, 'claude-haiku-4-5-20251001', true);
+      const m = text.match(/\{[^}]+\}/);
+      if (m) {
+        const parsed = JSON.parse(m[0]);
+        if (parsed.url) photoResult = { url: parsed.url, source: parsed.source || 'web-search' };
+      }
+    }
+
+    if (!photoResult?.url) return res.json({ url: null });
+
+    const photoUrl = await downloadAndSave(photoResult.url);
+    if (!photoUrl) return res.json({ url: null });
+
+    const result = db.addContactPhoto(req.params.id, photoUrl, photoResult.source || 'ai');
     db.setPrimaryPhoto(req.params.id, result.lastInsertRowid);
     res.json({ url: photoUrl });
   } catch (err) {
