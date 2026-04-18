@@ -1662,7 +1662,7 @@ app.post('/api/contacts/:id/fetch-photo', async (req, res) => {
     const isPhotoUrl = (src) => {
       if (!src) return false;
       // Blockera kända loggor, ikoner och sociala mediers statiska tillgångar
-      if (src.match(/logo|icon|banner|sprite|pixel|1x1|placeholder|favicon|badge|button|share|follow|social/i)) return false;
+      if (src.match(/logo|icon|banner|sprite|pixel|1x1|placeholder|favicon|badge|button|share|follow|social|insta|twitter|facebook|linkedin|youtube|tiktok/i)) return false;
       if (src.match(/instagram\.com\/static|cdninstagram\.com\/static|facebook\.com\/rsrc|linkedin\.com\/favicon|twimg\.com\/profile_images\/\d+\/.*normal/i)) return false;
       if (src.match(/\/static\/(images|assets)\/(logo|icon|badge)/i)) return false;
       return true;
