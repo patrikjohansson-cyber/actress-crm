@@ -25,6 +25,7 @@ app.use(basicAuth({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.text({ limit: '500mb', type: 'text/plain' }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(uploadsDir));
 
 const anthropic = new Anthropic();
 
