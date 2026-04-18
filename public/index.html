@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <style>
     :root {
@@ -563,6 +564,34 @@
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--hair); }
+
+    /* ── Tailwind override: applicera ny design på JS-genererade element ── */
+    .bg-white { background: var(--paper) !important; }
+    .bg-gray-50 { background: var(--paper-alt) !important; }
+    .bg-gray-100 { background: var(--paper-alt) !important; }
+    .bg-rose-50, .bg-amber-50, .bg-indigo-50, .bg-purple-50, .bg-green-50, .bg-blue-50 { background: var(--butter) !important; }
+    .rounded-3xl, .rounded-2xl, .rounded-xl, .rounded-lg, .rounded-md, .rounded-full, .rounded { border-radius: 0 !important; }
+    .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl { box-shadow: none !important; }
+    .border { border: 1px solid var(--rule) !important; }
+    .border-gray-100, .border-gray-200, .border-gray-300 { border-color: var(--rule) !important; }
+    .border-rose-200, .border-rose-300, .border-amber-300 { border-color: var(--rule) !important; }
+    .text-gray-900, .text-gray-800 { color: var(--ink) !important; }
+    .text-gray-700, .text-gray-600 { color: var(--soft) !important; }
+    .text-gray-500, .text-gray-400 { color: var(--soft) !important; opacity: 0.7; }
+    .text-rose-600, .text-rose-700 { color: var(--rust) !important; }
+    .text-amber-600, .text-amber-700 { color: var(--mustard) !important; }
+    .text-blue-600, .text-indigo-600 { color: var(--marine) !important; }
+    .text-green-600 { color: var(--forest) !important; }
+    .bg-rose-100, .bg-rose-400, .bg-rose-500 { background: var(--rust) !important; color: var(--paper) !important; }
+    .bg-amber-100 { background: var(--butter) !important; }
+    .bg-amber-400, .bg-amber-500 { background: var(--mustard) !important; }
+    .bg-indigo-100, .bg-indigo-500 { background: var(--marine) !important; color: var(--paper) !important; }
+    .font-bold { font-family: var(--font-serif) !important; }
+    .font-semibold { font-weight: 600 !important; }
+    .text-xs { font-size: 11px !important; font-family: var(--font-sans) !important; }
+    .text-sm { font-size: 13px !important; font-family: var(--font-sans) !important; }
+    input, select, textarea { border-radius: 0 !important; font-family: var(--font-sans) !important; border-color: var(--hair) !important; }
+    input:focus, select:focus, textarea:focus { outline: none !important; border-color: var(--ink) !important; box-shadow: none !important; }
   </style>
 </head>
 <body>
