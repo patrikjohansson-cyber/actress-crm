@@ -2886,5 +2886,10 @@ Hitta 10-15 castingkall/auditions. Svara ENBART med JSON-array:
   }
 });
 
+app.get('/download-db', (req, res) => {
+  const dbPath = process.env.DB_PATH || path.join(__dirname, 'crm.db');
+  res.download(dbPath, 'crm.db');
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Actress CRM: http://localhost:${PORT}`));
