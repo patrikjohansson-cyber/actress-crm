@@ -597,6 +597,10 @@ module.exports = {
     return !!db.prepare('SELECT id FROM contact_photos WHERE contact_id = ? AND url = ?').get(contactId, url);
   },
 
+  clearEnrichment(contactId) {
+    db.prepare(`UPDATE contacts SET enrichment_data = NULL, enriched_at = NULL WHERE id = ?`).run(contactId);
+  },
+
   getLastInteractionDate(contactId) {
     return db.prepare(`SELECT MAX(date) as last_date FROM interactions WHERE contact_id = ?`).get(contactId);
   },

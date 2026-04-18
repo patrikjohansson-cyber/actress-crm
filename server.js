@@ -162,7 +162,7 @@ app.delete('/api/contacts/:id', (req, res) => {
 });
 
 app.delete('/api/contacts/:id/enrichment', (req, res) => {
-  db.prepare(`UPDATE contacts SET enrichment_data = NULL, enriched_at = NULL WHERE id = ?`).run(req.params.id);
+  db.clearEnrichment(req.params.id);
   res.json({ ok: true });
 });
 
