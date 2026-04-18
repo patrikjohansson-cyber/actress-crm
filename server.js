@@ -1654,6 +1654,9 @@ app.post('/api/contacts/:id/fetch-photo', async (req, res) => {
     const urlsToScrape = [contact.website, ...urlsInNotes].filter(Boolean);
     const firstName = contact.name.split(' ')[0].toLowerCase();
 
+    const toAbs = (src, base) => { try { return src.startsWith('http') ? src : new URL(src, base).href; } catch { return null; } };
+    const isPhotoUrl = (src) => src && !src.match(/logo|icon|banner|sprite|pixel|1x1|placeholder/i);
+
     const scrapeForPhoto = async (pageUrl) => {
       try {
         const r = await fetch(pageUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) });
@@ -1661,25 +1664,50 @@ app.post('/api/contacts/:id/fetch-photo', async (req, res) => {
         const html = await r.text();
         const $ = cheerio.load(html);
 
-        // og:image är mest tillförlitlig för personhemsidor
+        const abs = (src) => toAbs(src, pageUrl);
+
+        // 1. og:image / twitter:image
         const ogImage = $('meta[property="og:image"]').attr('content');
-        if (ogImage) return { url: ogImage.startsWith('http') ? ogImage : new URL(ogImage, pageUrl).href, source: pageUrl };
-
+        if (ogImage && isPhotoUrl(ogImage)) return { url: abs(ogImage), source: pageUrl };
         const twitterImage = $('meta[name="twitter:image"]').attr('content');
-        if (twitterImage) return { url: twitterImage.startsWith('http') ? twitterImage : new URL(twitterImage, pageUrl).href, source: pageUrl };
+        if (twitterImage && isPhotoUrl(twitterImage)) return { url: abs(twitterImage), source: pageUrl };
 
-        // <img> vars alt-text innehåller personens förnamn
+        // 2. <img> i profil/bio/om-sektioner
+        const profileSelectors = ['.profile img', '.bio img', '.about img', '.person img',
+          '.portrait img', '.contact-photo img', '.headshot img', 'figure img', '.artist img'];
+        for (const sel of profileSelectors) {
+          const src = $(sel).first().attr('src');
+          if (src && isPhotoUrl(src)) return { url: abs(src), source: pageUrl };
+        }
+
+        // 3. <img> vars alt eller src innehåller personens förnamn eller efternamn
+        const nameParts = contact.name.toLowerCase().split(' ');
         let found = null;
         $('img').each((_, el) => {
           if (found) return;
           const alt = ($(el).attr('alt') || '').toLowerCase();
           const src = $(el).attr('src') || '';
-          if (alt.includes(firstName) && src && !src.match(/logo|icon|banner/i)) {
-            found = { url: src.startsWith('http') ? src : new URL(src, pageUrl).href, source: pageUrl };
+          const matchesName = nameParts.some(p => p.length > 2 && (alt.includes(p) || src.toLowerCase().includes(p)));
+          if (matchesName && isPhotoUrl(src)) found = { url: abs(src), source: pageUrl };
+        });
+        if (found) return found;
+
+        // 4. Första rimligt stora bild som inte verkar vara ikon/logotyp
+        $('img').each((_, el) => {
+          if (found) return;
+          const src = $(el).attr('src') || '';
+          const w = parseInt($(el).attr('width') || '0');
+          const h = parseInt($(el).attr('height') || '0');
+          if (!isPhotoUrl(src)) return;
+          if ((w >= 100 && h >= 100) || (!w && !h && src.match(/\.(jpg|jpeg|png|webp)/i))) {
+            found = { url: abs(src), source: pageUrl };
           }
         });
         return found;
-      } catch { return null; }
+      } catch (e) {
+        console.warn('[fetch-photo scrape]', pageUrl, e.message);
+        return null;
+      }
     };
 
     let photoResult = null;
@@ -1696,7 +1724,7 @@ Sök på teaterns hemsida, LinkedIn, IMDB, SVT, Dramaten eller svenska kulturins
 Svara ENBART med en JSON-rad: {"url":"https://...","source":"var du hittade den"}
 Hittar du ingen bild, svara: {"url":null,"source":""}
 Returnera bara EN bild — den bäst matchande. Sluta söka när du hittat en.`;
-      const text = await claudeSearch(prompt, 500, 'claude-haiku-4-5-20251001', true);
+      const text = await claudeSearch(prompt, 500, 'claude-sonnet-4-6', true);
       const m = text.match(/\{[^}]+\}/);
       if (m) {
         const parsed = JSON.parse(m[0]);
