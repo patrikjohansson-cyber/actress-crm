@@ -2487,8 +2487,8 @@ function renderPhotosHTML(photos, contactId) {
                onclick="setPhotoAsPrimary(${p.id}, ${contactId})">
           ${p.is_primary ? `<span class="absolute bottom-0.5 left-1 text-white text-[10px] drop-shadow select-none">★</span>` : ''}
           ${p.source === 'ai' ? `<span class="absolute top-0.5 left-0.5 bg-purple-500 text-white text-[8px] px-1 rounded leading-tight">AI</span>` : ''}
-          <button onclick="deletePhoto(${p.id}, ${contactId})"
-            class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full text-[10px] items-center justify-center hidden group-hover:flex leading-none shadow">
+          <button onclick="event.stopPropagation(); deletePhoto(${p.id}, ${contactId})"
+            style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;background:#ef4444;color:#fff;border-radius:50%;font-size:10px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);cursor:pointer;line-height:1;">
             ✕
           </button>
         </div>`).join('')}
