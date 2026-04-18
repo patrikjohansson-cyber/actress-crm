@@ -2698,6 +2698,10 @@ async function matchOrgEmails(orgId) {
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+function ensureHttps(url) {
+  if (!url) return url;
+  return /^https?:\/\//i.test(url) ? url : 'https://' + url;
+}
 function attrJson(v) {
   return JSON.stringify(v == null || v === '' ? null : v).replace(/"/g, '&quot;');
 }
@@ -2816,7 +2820,7 @@ function renderContactPanel(c, interactions, projects, orgs = [], contactOrgs = 
   const infoSection = `
     <div class="mb-4 pb-4 border-b space-y-2">
       ${c.phone ? `<div class="text-xs text-gray-400">📞 ${escHtml(c.phone)}</div>` : ''}
-      ${c.website ? `<a href="${escHtml(c.website)}" target="_blank" class="text-xs text-blue-500 hover:underline block">🌐 ${escHtml(c.website)}</a>` : ''}
+      ${c.website ? `<a href="${escHtml(ensureHttps(c.website))}" target="_blank" class="text-xs text-blue-500 hover:underline block">🌐 ${escHtml(c.website)}</a>` : ''}
       <!-- Roller -->
       <div class="flex flex-wrap items-center gap-1">
         ${roles.map(r => `

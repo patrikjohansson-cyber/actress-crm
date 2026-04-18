@@ -11,6 +11,8 @@ const { simpleParser } = require('mailparser');
 const cheerio = require('cheerio');
 const db = require('./db');
 
+const ensureHttps = (url) => url && !/^https?:\/\//i.test(url) ? 'https://' + url : url;
+
 // Ensure uploads dir exists
 const uploadsDir = process.env.UPLOADS_PATH || path.join(__dirname, 'public', 'uploads');
 fs.mkdirSync(uploadsDir, { recursive: true });
@@ -1266,7 +1268,7 @@ app.post('/api/contacts/:id/enrich', async (req, res) => {
     const urlsInNotes = [...notesText.matchAll(/https?:\/\/[^\s)>\]"]+/g)].map(m => m[0]).slice(0, 3);
 
     const scrapeResults = await Promise.all([
-      contact.website ? scrapeUrl(contact.website, `Hemsida (${contact.website})`) : null,
+      contact.website ? scrapeUrl(ensureHttps(contact.website), `Hemsida (${contact.website})`) : null,
       ...urlsInNotes.map(u => scrapeUrl(u, `Länk från anteckningar (${u})`))
     ]);
     const scrapedContent = scrapeResults.filter(Boolean).join('\n\n');
@@ -1651,7 +1653,7 @@ app.post('/api/contacts/:id/fetch-photo', async (req, res) => {
     // Steg 1: Skrapa hemsida och URL:er från anteckningar
     const notesText = contact.notes || '';
     const urlsInNotes = [...notesText.matchAll(/https?:\/\/[^\s)>\]"]+/g)].map(m => m[0]).slice(0, 3);
-    const urlsToScrape = [contact.website, ...urlsInNotes].filter(Boolean);
+    const urlsToScrape = [contact.website, ...urlsInNotes].filter(Boolean).map(ensureHttps);
     const firstName = contact.name.split(' ')[0].toLowerCase();
 
     const toAbs = (src, base) => { try { return src.startsWith('http') ? src : new URL(src, base).href; } catch { return null; } };
