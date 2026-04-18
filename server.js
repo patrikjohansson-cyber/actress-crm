@@ -161,6 +161,11 @@ app.delete('/api/contacts/:id', (req, res) => {
   }
 });
 
+app.delete('/api/contacts/:id/enrichment', (req, res) => {
+  db.prepare(`UPDATE contacts SET enrichment_data = NULL, enriched_at = NULL WHERE id = ?`).run(req.params.id);
+  res.json({ ok: true });
+});
+
 // Retroaktivt matcha befintliga mejl till en kontakt + skapa interaktioner
 app.post('/api/contacts/:id/match-emails', (req, res) => {
   const contact = db.getContact(req.params.id);

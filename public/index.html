@@ -2573,6 +2573,18 @@ async function addPhotoByUrl(contactId) {
   loading(false);
 }
 
+async function clearContactEnrichment(contactId) {
+  if (!confirm('Rensa all AI-insamlad information om denna kontakt?')) return;
+  loading(true);
+  try {
+    await api('DELETE', `/api/contacts/${contactId}/enrichment`);
+    toast('AI-information rensad');
+    openContactPanel(contactId);
+    if (currentView === 'contacts') loadContacts();
+  } catch (err) { toast(err.message, 'error'); }
+  loading(false);
+}
+
 async function deletePhoto(photoId, contactId) {
   loading(true);
   try {
@@ -3256,8 +3268,9 @@ function renderEnrichmentHTML(c, orgColleagues = []) {
   const sources = enrichment.sources || [];
   return `
     <div>
-      <div class="mb-2">
+      <div class="flex items-center justify-between mb-2">
         <h3 class="text-sm font-semibold text-gray-700">Om kontakten</h3>
+        <button onclick="clearContactEnrichment(${c.id})" class="text-xs text-gray-400 hover:text-red-500 transition" title="Rensa AI-information">✕ Rensa</button>
       </div>
       ${emailAnalysisHtml}
       ${enrichment.ai_rank_reason ? `<p class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-full px-2.5 py-1.5 mb-3">● ${escHtml(enrichment.ai_rank_reason)}</p>` : ''}
