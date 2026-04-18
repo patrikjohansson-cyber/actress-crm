@@ -127,7 +127,7 @@
     /* Profilstyrka */
     .profile-strength-wrap { padding: 6px 12px 0; }
     .profile-strength-label { display: flex; justify-content: space-between; margin-bottom: 4px; }
-    .profile-strength-label span { font-family: var(--font-mono); font-size: 9px; letter-spacing: 1px; color: rgba(42,31,10,0.5); }
+    .profile-strength-label span { font-family: var(--font-mono); font-size: 9px; letter-spacing: 1px; color: rgba(42,31,10,0.85); font-weight: 600; }
     .profile-strength-track { height: 2px; background: rgba(42,31,10,0.15); }
     .profile-strength-fill { height: 2px; transition: width 0.5s ease; }
 
@@ -537,18 +537,6 @@
     details summary { list-style: none; cursor: pointer; }
     details summary::-webkit-details-marker { display: none; }
 
-    /* ── Auto-priority banner ── */
-    #auto-priority-banner {
-      background: var(--butter);
-      border: 1px solid var(--mustard);
-      padding: 12px 16px;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-
     /* ── Animations ── */
     @keyframes spin {
       to { transform: rotate(360deg); }
@@ -626,7 +614,7 @@
         <span id="profile-completeness-pct">–</span>
       </div>
       <div class="profile-strength-track">
-        <div id="profile-completeness-fill" class="profile-strength-fill" style="width:0%;background:var(--rust);"></div>
+        <div id="profile-completeness-fill" class="profile-strength-fill" style="width:0%;background:var(--ink);"></div>
       </div>
     </div>
   </div>
@@ -757,19 +745,15 @@
           <button onclick="openBulkEnrichModal()" class="btn btn-ghost btn-sm">Berika grupp</button>
           <button onclick="findDuplicates()" class="btn btn-ghost btn-sm">Hitta dubletter</button>
           <button onclick="openNewContactPanel()" class="btn btn-accent">+ Ny kontakt</button>
+          <div style="display:flex;gap:4px;border:1px solid var(--rule);padding:2px;">
+            <button id="contacts-view-grid" onclick="setContactsView('grid')" style="padding:5px 10px;font-family:var(--font-mono);font-size:9px;letter-spacing:1px;background:var(--ink);color:var(--paper);border:none;cursor:pointer;">▦ KORT</button>
+            <button id="contacts-view-list" onclick="setContactsView('list')" style="padding:5px 10px;font-family:var(--font-mono);font-size:9px;letter-spacing:1px;background:transparent;color:var(--soft);border:none;cursor:pointer;">≡ LISTA</button>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="view-body" style="max-width:1200px;">
-
-      <div id="auto-priority-banner" class="hidden">
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--ink);">Sätt prioritet baserat på senaste kontakt</div>
-          <div class="t-small" style="color:var(--soft);margin-top:2px;">Går igenom alla kontakter och tilldelar 1–5 stjärnor efter hur nylig kontakten var. Görs bara en gång.</div>
-        </div>
-        <button onclick="runAutoPriority()" class="btn btn-primary btn-sm" style="flex-shrink:0;">Kör nu</button>
-      </div>
 
       <!-- Filters -->
       <div class="filter-row">
@@ -805,6 +789,7 @@
       </div>
 
       <div id="contactsGrid"></div>
+      <div id="contactsList" class="hidden"></div>
     </div>
   </div>
 
@@ -841,6 +826,10 @@
         <div style="display:flex;gap:8px;">
           <button onclick="importProjectsFromProfile()" id="import-projects-btn" class="btn btn-ghost btn-sm">✦ Importera från profil</button>
           <button onclick="openNewProjectPanel()" class="btn btn-accent">+ Nytt projekt</button>
+          <div style="display:flex;gap:4px;border:1px solid var(--rule);padding:2px;">
+            <button id="projects-view-grid" onclick="setProjectsView('grid')" style="padding:5px 10px;font-family:var(--font-mono);font-size:9px;letter-spacing:1px;background:var(--ink);color:var(--paper);border:none;cursor:pointer;">▦ KORT</button>
+            <button id="projects-view-list" onclick="setProjectsView('list')" style="padding:5px 10px;font-family:var(--font-mono);font-size:9px;letter-spacing:1px;background:transparent;color:var(--soft);border:none;cursor:pointer;">≡ LISTA</button>
+          </div>
         </div>
       </div>
     </div>
@@ -861,6 +850,7 @@
       </div>
 
       <div id="projectsGrid"></div>
+      <div id="projectsList" class="hidden"></div>
     </div>
   </div>
 
@@ -1373,7 +1363,7 @@
 <!-- ═══════════════════════════════════════════════════════════
      APPLICATION WRITING PANEL
 ═══════════════════════════════════════════════════════════ -->
-<div id="application-panel" style="position:fixed;inset:0;z-index:50;" class="hidden">
+<div id="application-panel" style="position:fixed;inset:0;z-index:9999;" class="hidden">
   <div style="position:absolute;inset:0;background:rgba(42,31,10,0.35);" onclick="closeApplicationPanel()"></div>
   <div style="position:absolute;right:0;top:0;height:100%;width:640px;background:var(--paper);display:flex;flex-direction:column;border-left:1px solid var(--rule);">
     <!-- Panel header -->
@@ -2197,20 +2187,15 @@ async function cycleIndustryStar(id, current, btn) {
 }
 
 async function runAutoPriority() {
-  const banner = document.getElementById('auto-priority-banner');
   try {
     const r = await api('POST', '/api/contacts/auto-priority');
     toast(`Prioritet satt på ${r.updated} kontakter!`);
-    banner.classList.add('hidden');
     localStorage.setItem('auto-priority-done', '1');
     loadContacts();
   } catch (e) { toast(e.message, 'error'); }
 }
 
 async function loadContacts() {
-  if (!localStorage.getItem('auto-priority-done')) {
-    document.getElementById('auto-priority-banner')?.classList.remove('hidden');
-  }
   loading(true);
   try {
     const search = document.getElementById('contactSearch')?.value || '';
@@ -2291,7 +2276,7 @@ function renderContacts(contacts, orgs = [], contactJobs = {}, contactStipends =
     const stipends = contactStipends[c.id] || [];
     const latestStipend = stipends[stipends.length - 1];
 
-    const b = 'inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full';
+    const b = 'inline-flex items-center gap-0.5 text-[9px] px-1 py-0 rounded-full';
     const badges = [
       schoolName ? `<span class="${b} bg-blue-50 text-blue-700 border border-blue-100" title="Studerat med Jonna">🎓 ${escHtml(schoolName)}</span>` : '',
       ...prodNames.map(n => `<span class="${b} bg-violet-50 text-violet-700 border border-violet-100" title="Spelat med Jonna">🎭 ${escHtml(n.length > 20 ? n.slice(0,19)+'…' : n)}</span>`),
@@ -2315,8 +2300,9 @@ function renderContacts(contacts, orgs = [], contactJobs = {}, contactStipends =
           ${(() => { try { const r = JSON.parse(c.roles || '[]'); return r.length ? `<div class="text-xs text-gray-400 truncate">${r.join(' · ')}</div>` : ''; } catch { return ''; } })()}
         </div>
       </div>
-      ${badges.length ? `<div class="flex gap-1 flex-wrap mb-2">${badges.join('')}</div>` : ''}
-      ${tags.length ? `<div class="flex gap-1 flex-wrap mb-2">${tags.slice(0,2).map(t => `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">${escHtml(t)}</span>`).join('')}</div>` : ''}
+      ${badges.length ? `<div class="flex gap-1 flex-wrap mb-1">${badges.join('')}</div>` : ''}
+      ${tags.length ? `<div class="flex gap-1 flex-wrap mb-1">${tags.slice(0,2).map(t => `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">${escHtml(t)}</span>`).join('')}</div>` : ''}
+      ${badges.length < 2 && enrichment?.bio ? `<div style="font-size:11px;color:#6b5d48;line-height:1.4;margin-bottom:4px;">${escHtml(enrichment.bio.slice(0, 80))}${enrichment.bio.length > 80 ? '…' : ''}</div>` : ''}
       <div class="mt-auto pt-2">
         <div class="w-full bg-gray-100 rounded-full h-1.5">
           <div class="h-1.5 rounded-full transition-all" style="width:${(c.priority || 5) * 10}%; background: hsl(${220 - (c.priority || 5) * 22}, 85%, 50%)"></div>
@@ -2324,6 +2310,41 @@ function renderContacts(contacts, orgs = [], contactJobs = {}, contactStipends =
       </div>
     </div>`;
   }).join('');
+
+  // Lista-vy
+  const listEl = document.getElementById('contactsList');
+  if (listEl) {
+    listEl.innerHTML = contacts.map(c => {
+      const roles = (() => { try { return JSON.parse(c.roles || '[]'); } catch { return []; } })();
+      return `<div onclick="openContactPanel(${c.id})" style="display:flex;align-items:center;gap:16px;padding:10px 0;border-bottom:1px solid var(--rule);cursor:pointer;" onmouseover="this.style.background='var(--paper-alt)'" onmouseout="this.style.background=''">
+        ${avatar(c.name, 8, c.photo_url)}
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:var(--font-serif);font-size:15px;color:var(--ink);">${escHtml(c.name)}</div>
+          ${c.org_names ? `<div style="font-size:11px;color:var(--soft);">${escHtml(c.org_names)}</div>` : ''}
+        </div>
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--soft);letter-spacing:1px;text-transform:uppercase;min-width:120px;">${roles.slice(0,2).join(' · ')}</div>
+        <div style="width:60px;">
+          <div style="width:100%;height:3px;background:var(--rule);border-radius:2px;">
+            <div style="width:${(c.priority||5)*10}%;height:3px;background:var(--mustard);border-radius:2px;"></div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+let contactsViewMode = 'grid';
+function setContactsView(mode) {
+  contactsViewMode = mode;
+  document.getElementById('contacts-view-grid').style.background = mode === 'grid' ? 'var(--ink)' : 'transparent';
+  document.getElementById('contacts-view-grid').style.color = mode === 'grid' ? 'var(--paper)' : 'var(--soft)';
+  document.getElementById('contacts-view-list').style.background = mode === 'list' ? 'var(--ink)' : 'transparent';
+  document.getElementById('contacts-view-list').style.color = mode === 'list' ? 'var(--paper)' : 'var(--soft)';
+  const grid = document.getElementById('contactsGrid');
+  const list = document.getElementById('contactsList');
+  if (mode === 'grid') { grid.classList.remove('hidden'); list.classList.add('hidden'); }
+  else { grid.classList.add('hidden'); list.classList.remove('hidden'); }
+  loadContacts();
 }
 
 function openNewContactPanel() {
@@ -3651,6 +3672,21 @@ function renderProjects(projects) {
         ${p.own_work ? `<span class="text-rose-500 font-medium">Eget projekt</span>` : ''}
       </div>
     </div>`).join('');
+}
+
+let projectsViewMode = 'grid';
+function setProjectsView(mode) {
+  projectsViewMode = mode;
+  document.getElementById('projects-view-grid').style.background = mode === 'grid' ? 'var(--ink)' : 'transparent';
+  document.getElementById('projects-view-grid').style.color = mode === 'grid' ? 'var(--paper)' : 'var(--soft)';
+  document.getElementById('projects-view-list').style.background = mode === 'list' ? 'var(--ink)' : 'transparent';
+  document.getElementById('projects-view-list').style.color = mode === 'list' ? 'var(--paper)' : 'var(--soft)';
+  // toggle visibility
+  const gridEl = document.getElementById('projectsGrid');
+  const listEl = document.getElementById('projectsList');
+  if (mode === 'grid') { gridEl.classList.remove('hidden'); listEl.classList.add('hidden'); }
+  else { gridEl.classList.add('hidden'); listEl.classList.remove('hidden'); }
+  loadProjects?.();
 }
 
 function openNewProjectPanel() {
