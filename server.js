@@ -1753,8 +1753,8 @@ Returnera bara EN URL. Sluta söka när du hittat en riktig porträttbild.`;
     db.setPrimaryPhoto(req.params.id, result.lastInsertRowid);
     res.json({ url: photoUrl });
   } catch (err) {
-    console.error('[fetch-photo]', err.message);
-    res.status(500).json({ error: err.message });
+    console.error('[fetch-photo]', err.stack || err.message);
+    res.status(500).json({ error: err.message || 'Okänt serverfel vid bildsökning' });
   }
 });
 

@@ -1510,7 +1510,7 @@ async function api(method, url, body) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(url, opts);
-  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.statusText); }
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.statusText || `HTTP ${res.status}`); }
   return res.json();
 }
 
@@ -6076,7 +6076,7 @@ async function importSendersCSV(input) {
   try {
     const text = await file.text();
     const res = await fetch('/api/emails/unknown-senders/import-csv', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: text });
-    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.statusText); }
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.statusText || `HTTP ${res.status}`); }
     const result = await res.json();
     toast(`${result.added} kontakter tillagda${result.skipped ? ', ' + result.skipped + ' hoppades över' : ''}`);
     const profile = await api('GET', '/api/jonna/profile');
