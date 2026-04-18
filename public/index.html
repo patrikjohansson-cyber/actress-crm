@@ -6632,18 +6632,23 @@ function switchApplicationTab(tab) {
 }
 
 function openApplicationPanel(opportunityData) {
-  currentApplicationData = opportunityData || {};
-  currentApplicationId = null;
-  document.getElementById('apanel-title').textContent = opportunityData?.title || 'Ny ansökan';
-  document.getElementById('apanel-org').textContent = opportunityData?.organization || '';
-  document.getElementById('apanel-extra-context').value = '';
-  document.getElementById('apanel-instructions').value = '';
-  document.getElementById('application-panel').classList.remove('hidden');
-  document.getElementById('apanel-step-1').classList.remove('hidden');
-  document.getElementById('apanel-step-2').classList.add('hidden');
-  document.getElementById('apanel-step-3').classList.add('hidden');
-  updateApStepDots(1);
-  analyzeOpportunityForPanel(opportunityData);
+  try {
+    currentApplicationData = opportunityData || {};
+    currentApplicationId = null;
+    document.getElementById('apanel-title').textContent = opportunityData?.title || 'Ny ansökan';
+    document.getElementById('apanel-org').textContent = opportunityData?.organization || '';
+    document.getElementById('apanel-extra-context').value = '';
+    document.getElementById('apanel-instructions').value = '';
+    document.getElementById('application-panel').classList.remove('hidden');
+    document.getElementById('apanel-step-1').classList.remove('hidden');
+    document.getElementById('apanel-step-2').classList.add('hidden');
+    document.getElementById('apanel-step-3').classList.add('hidden');
+    updateApStepDots(1);
+    analyzeOpportunityForPanel(opportunityData);
+  } catch(e) {
+    console.error('[openApplicationPanel]', e);
+    toast('Kunde inte öppna ansökningspanelen: ' + e.message, 'error');
+  }
 }
 
 function closeApplicationPanel() {
