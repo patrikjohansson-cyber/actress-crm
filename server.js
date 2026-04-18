@@ -481,6 +481,10 @@ app.get('/api/jonna/infobank', (req, res) => {
   const manualSkills = profile.manual_skills || [];
   const selfSearch = profile.self_search_results || {};
   const cvParsed = profile.cv_parsed || {};
+  const artisticStatement = profile.artistic_statement || '';
+  const writingStyle = profile.writing_style || null;
+  let appSamples = [];
+  try { appSamples = typeof profile.application_samples === 'string' ? JSON.parse(profile.application_samples) : (profile.application_samples || []); } catch {}
 
   // ── Utbildning — alla källor
   const manualEdu = profile.manual_education || [];
@@ -582,6 +586,28 @@ app.get('/api/jonna/infobank', (req, res) => {
   if (profiles.length) {
     lines.push('## Profiler & länkar');
     profiles.forEach(p => lines.push(`- ${p.platform || ''}${p.url ? ': ' + p.url : ''}`));
+    lines.push('');
+  }
+
+  if (artisticStatement) {
+    lines.push(`## Konstnärligt statement\n${artisticStatement}\n`);
+  }
+
+  if (writingStyle) {
+    lines.push('## Skrivstil');
+    if (writingStyle.tone) lines.push(`Ton: ${writingStyle.tone}`);
+    if (writingStyle.style_notes) lines.push(writingStyle.style_notes);
+    if (writingStyle.example_phrases?.length) lines.push(`Typiska fraser: ${writingStyle.example_phrases.join(' / ')}`);
+    if (writingStyle.analysis) lines.push(`\n${writingStyle.analysis}`);
+    lines.push('');
+  }
+
+  if (appSamples.length) {
+    lines.push('## Exempelansökningar');
+    appSamples.forEach((s, i) => {
+      lines.push(`\n### Exempel ${i + 1}${s.title ? ': ' + s.title : ''}`);
+      if (s.text) lines.push(s.text.slice(0, 800));
+    });
     lines.push('');
   }
 
@@ -1759,7 +1785,11 @@ app.post('/api/jonna/analyze-style', async (req, res) => {
   const ownEmail = db.getJonnaKey('own_email') || (db.getJonnaKey('email_settings') || {}).email || '';
   const sentEmails = ownEmail ? db.getSentEmailSamples(ownEmail, 20) : [];
 
-  if (!letters.length && !sentEmails.length) {
+  let styleAppSamples = [];
+  try { styleAppSamples = typeof profile.application_samples === 'string' ? JSON.parse(profile.application_samples) : (profile.application_samples || []); } catch {}
+  const artisticStmt = profile.artistic_statement || '';
+
+  if (!letters.length && !sentEmails.length && !styleAppSamples.length) {
     return res.status(400).json({ error: 'Lägg till brev/texter eller importera e-post först' });
   }
 
@@ -1772,6 +1802,13 @@ app.post('/api/jonna/analyze-style', async (req, res) => {
     parts.push('=== Skickade e-post ===');
     parts.push(sentEmails.map((e, i) => `--- Mejl ${i + 1}${e.subject ? ' — ' + e.subject : ''} ---\n${e.body_text || ''}`).join('\n\n'));
   }
+  if (styleAppSamples.length) {
+    parts.push('=== Exempelansökningar ===');
+    parts.push(styleAppSamples.map((s, i) => `--- Ansökan ${i + 1}${s.title ? ' — ' + s.title : ''} ---\n${s.text || ''}`).join('\n\n'));
+  }
+  if (artisticStmt) {
+    parts.push(`=== Konstnärligt statement ===\n${artisticStmt}`);
+  }
   const samples = parts.join('\n\n');
 
   try {
@@ -1780,7 +1817,7 @@ app.post('/api/jonna/analyze-style', async (req, res) => {
       max_tokens: 1000,
       messages: [{
         role: 'user',
-        content: `Analysera Jonnas skrivstil baserat på dessa texter för att kunna imitera hennes röst vid AI-genererade uppföljningsmeddelanden.
+        content: `Analysera Jonnas skrivstil baserat på dessa texter för att kunna imitera hennes röst vid AI-genererade ansökningar och meddelanden. Materialet kan innehålla personliga brev, e-post, exempelansökningar och konstnärligt statement.
 
 ${samples.slice(0, 12000)}
 
