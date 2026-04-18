@@ -761,6 +761,7 @@ app.get('/api/discover/status', (req, res) => {
     last_searched_jobs:     db.getJonnaKey('last_searched_jobs')     || null,
     last_searched_stipends: db.getJonnaKey('last_searched_stipends') || null,
     last_searched_grants:   db.getJonnaKey('last_searched_grants')   || null,
+    last_searched_castings: db.getJonnaKey('last_searched_castings') || null,
   });
 });
 
@@ -2962,6 +2963,7 @@ Extrahera casting calls ur den scrapade texten och komplettera med websökning. 
       saved.push(l);
     }
 
+    if (saved.length) db.setJonnaKey('last_searched_castings', new Date().toISOString());
     res.json(saved);
   } catch (err) {
     const status = err.status === 529 ? 529 : err.status === 429 ? 429 : 500;

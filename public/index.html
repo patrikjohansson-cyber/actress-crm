@@ -4816,6 +4816,7 @@ async function loadDiscover() {
   setSearchStatus('jobs', status.last_searched_jobs);
   setSearchStatus('stipends', status.last_searched_stipends);
   setSearchStatus('grants', status.last_searched_grants);
+  setSearchStatus('castings', status.last_searched_castings);
 }
 
 async function loadCastings() {
@@ -4865,6 +4866,8 @@ async function searchCastings(reset = false) {
     const castings = await api('POST', url);
     renderCastings(castings);
     toast(`Hittade ${castings.length} casting calls`);
+    const s = await api('GET', '/api/discover/status').catch(() => ({}));
+    setSearchStatus('castings', s.last_searched_castings);
   } catch (e) {
     document.getElementById('search-status-castings').textContent = e.message;
     document.getElementById('search-status-castings').classList.add('text-red-500');
