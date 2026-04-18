@@ -7,969 +7,1440 @@
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <style>
-    body { font-family: 'Inter', system-ui, sans-serif; }
+    :root {
+      --paper: #f5f1e8;
+      --paper-alt: #ede8dc;
+      --ink: #2a1f0a;
+      --soft: #6b5d48;
+      --hair: #c9bfa9;
+      --rule: #dcd4c0;
+      --butter: #f0e6c8;
+      --mustard: #edc33e;
+      --rust: #b24a2a;
+      --marine: #2a4a6e;
+      --forest: #4a6b3a;
+      --plum: #6b3a4a;
+      --blush: #d4a574;
+      --font-serif: "Fraunces", Georgia, serif;
+      --font-sans: "Inter Tight", -apple-system, sans-serif;
+      --font-mono: "JetBrains Mono", monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: var(--font-sans);
+      background: var(--paper);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── Loading bar ── */
     #loadingBar { transition: width 0.3s ease; }
+
+    /* ── Toast ── */
+    #toast {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Slide panel ── */
     .slide-panel { transition: transform 0.25s ease; }
     .slide-panel.hidden-panel { transform: translateX(100%); }
+
+    /* ── Stars ── */
     .star { cursor: pointer; }
-    .star.filled { color: #f59e0b; }
-    .star.empty { color: #d1d5db; }
-    input:focus, textarea:focus, select:focus { outline: none; ring: none; }
+    .star.filled { color: var(--mustard); }
+    .star.empty { color: var(--hair); }
+
+    /* ── Focus reset ── */
+    input:focus, textarea:focus, select:focus { outline: 2px solid var(--mustard); outline-offset: 1px; }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 240px;
+      background: var(--mustard);
+      color: var(--ink);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      border-right: 1px solid rgba(42,31,10,0.12);
+    }
+
+    #sidebar-brand {
+      padding: 22px 20px 16px;
+      border-bottom: 1px solid rgba(42,31,10,0.12);
+    }
+
+    #sidebar-brand h1 {
+      font-family: var(--font-serif);
+      font-size: 26px;
+      font-style: italic;
+      font-weight: 400;
+      color: var(--ink);
+      line-height: 1;
+      letter-spacing: -0.5px;
+    }
+
+    #sidebar-brand .sub-brand {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(42,31,10,0.5);
+      margin-top: 3px;
+    }
+
+    /* Min profil knapp i sidebar */
+    #nav-jonna {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      text-align: left;
+      padding: 8px 12px;
+      margin-top: 10px;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: rgba(42,31,10,0.7);
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    #nav-jonna:hover { background: rgba(42,31,10,0.08); }
+    #nav-jonna.nav-active {
+      background: rgba(42,31,10,0.92);
+      color: var(--mustard);
+      border-left: 2px solid var(--ink);
+    }
+
+    /* Profilstyrka */
+    .profile-strength-wrap { padding: 6px 12px 0; }
+    .profile-strength-label { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .profile-strength-label span { font-family: var(--font-mono); font-size: 9px; letter-spacing: 1px; color: rgba(42,31,10,0.5); }
+    .profile-strength-track { height: 2px; background: rgba(42,31,10,0.15); }
+    .profile-strength-fill { height: 2px; transition: width 0.5s ease; }
+
+    /* Nav */
+    #sidebar nav {
+      flex: 1;
+      padding: 12px 8px;
+    }
+
+    .nav-divider {
+      height: 1px;
+      background: rgba(42,31,10,0.12);
+      margin: 8px 8px;
+    }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      text-align: left;
+      padding: 10px 16px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--ink);
+      background: transparent;
+      border: none;
+      border-left: 2px solid transparent;
+      cursor: pointer;
+      transition: background 0.1s;
+      position: relative;
+    }
+
+    .nav-btn:hover { background: rgba(42,31,10,0.08); }
+
+    .nav-btn.nav-active {
+      background: rgba(42,31,10,0.92);
+      color: var(--mustard);
+      border-left-color: var(--ink);
+    }
+
+    .nav-btn .nav-badge {
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      background: var(--ink);
+      color: var(--mustard);
+      padding: 1px 5px;
+      font-weight: 700;
+    }
+
+    #sidebar-footer {
+      padding: 12px 20px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: rgba(42,31,10,0.4);
+      border-top: 1px solid rgba(42,31,10,0.12);
+    }
+
+    /* ── Main canvas ── */
+    main {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--paper);
+    }
+
+    /* ── Masthead ── */
+    .masthead {
+      padding: 26px 48px 22px;
+      border-bottom: 1px solid var(--hair);
+      background: var(--paper);
+    }
+
+    .masthead-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--soft);
+      margin-bottom: 6px;
+    }
+
+    .masthead-title {
+      font-family: var(--font-serif);
+      font-size: 48px;
+      font-style: italic;
+      font-weight: 400;
+      color: var(--ink);
+      letter-spacing: -1px;
+      line-height: 0.95;
+    }
+
+    .masthead-meta {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--soft);
+      letter-spacing: 1px;
+      margin-top: 8px;
+    }
+
+    .masthead-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* ── View container ── */
+    .view-body {
+      padding: 32px 48px;
+      max-width: 1100px;
+    }
+
+    /* ── Knappar ── */
+    .btn {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      padding: 7px 14px;
+      border: 1px solid currentColor;
+      background: transparent;
+      color: var(--ink);
+      font-weight: 500;
+      border-radius: 0;
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--ink);
+      color: var(--paper);
+      border-color: var(--ink);
+    }
+    .btn-primary:hover { background: var(--soft); border-color: var(--soft); }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--ink);
+      border-color: var(--ink);
+    }
+    .btn-secondary:hover { background: rgba(42,31,10,0.06); }
+
+    .btn-accent {
+      background: var(--rust);
+      color: var(--paper);
+      border-color: var(--rust);
+    }
+    .btn-accent:hover { background: #8f3a1f; border-color: #8f3a1f; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--soft);
+      border-color: var(--hair);
+    }
+    .btn-ghost:hover { background: var(--paper-alt); color: var(--ink); }
+
+    .btn-sm {
+      font-size: 10px;
+      padding: 5px 10px;
+    }
+
+    /* ── Kortdesign ── */
+    .card {
+      border: 1px solid var(--rule);
+      border-radius: 0;
+      background: var(--paper-alt);
+      padding: 14px 20px;
+    }
+
+    .card-ink {
+      border: 1px solid var(--rule);
+      background: var(--paper);
+      padding: 14px 20px;
+    }
+
+    .card-accent-rust { border-left: 3px solid var(--rust); }
+    .card-accent-marine { border-left: 3px solid var(--marine); }
+    .card-accent-forest { border-left: 3px solid var(--forest); }
+    .card-accent-mustard { border-left: 3px solid var(--mustard); }
+    .card-accent-plum { border-left: 3px solid var(--plum); }
+    .card-accent-soft { border-left: 3px solid var(--soft); }
+
+    .card-top-rust { border-top: 2px solid var(--rust); }
+    .card-top-marine { border-top: 2px solid var(--marine); }
+
+    /* ── Typografi ── */
+    .t-display { font-family: var(--font-serif); font-size: 48px; line-height: 1.0; letter-spacing: -1px; font-weight: 400; }
+    .t-display-l { font-family: var(--font-serif); font-size: 30px; line-height: 1.1; letter-spacing: -0.5px; font-weight: 400; }
+    .t-display-m { font-family: var(--font-serif); font-size: 22px; line-height: 1.1; letter-spacing: -0.3px; font-weight: 400; }
+    .t-body-l { font-family: var(--font-serif); font-size: 17px; line-height: 1.45; }
+    .t-body { font-family: var(--font-sans); font-size: 14px; line-height: 1.5; }
+    .t-small { font-family: var(--font-sans); font-size: 12px; line-height: 1.45; }
+    .t-meta { font-family: var(--font-mono); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; }
+    .t-micro { font-family: var(--font-mono); font-size: 9px; letter-spacing: 1.5px; }
+
+    /* ── Grid & layout helpers ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .flex-row { display: flex; align-items: center; gap: 8px; }
+    .flex-between { display: flex; align-items: center; justify-content: space-between; }
+    .flex-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+    .space-y > * + * { margin-top: 12px; }
+    .space-y-sm > * + * { margin-top: 8px; }
+    .hidden { display: none !important; }
+
+    /* ── Tabs ── */
+    .tab-row {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--hair);
+      margin-bottom: 24px;
+    }
+
+    .tab-btn {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 10px 18px;
+      border: none;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: var(--soft);
+      cursor: pointer;
+      transition: color 0.1s;
+      margin-bottom: -1px;
+    }
+
+    .tab-btn:hover { color: var(--ink); }
+
+    .tab-btn.tab-active {
+      color: var(--ink);
+      border-bottom-color: var(--ink);
+    }
+
+    /* ── Filters / search ── */
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .filter-input {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      padding: 6px 12px;
+      border: 1px solid var(--rule);
+      border-radius: 0;
+      background: var(--paper);
+      color: var(--ink);
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .filter-select {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      padding: 6px 10px;
+      border: 1px solid var(--rule);
+      border-radius: 0;
+      background: var(--paper);
+      color: var(--ink);
+    }
+
+    /* ── Form inputs ── */
+    .f-input {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      padding: 7px 10px;
+      border: 1px solid var(--rule);
+      border-radius: 0;
+      background: var(--paper);
+      color: var(--ink);
+      width: 100%;
+    }
+
+    .f-input:focus { border-color: var(--ink); outline: none; }
+
+    .f-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--soft);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .f-group { margin-bottom: 12px; }
+
+    .f-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* ── Badge / pill ── */
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border: 1px solid currentColor;
+    }
+
+    .badge-rust { color: var(--rust); border-color: var(--rust); background: rgba(178,74,42,0.06); }
+    .badge-marine { color: var(--marine); border-color: var(--marine); background: rgba(42,74,110,0.06); }
+    .badge-forest { color: var(--forest); border-color: var(--forest); background: rgba(74,107,58,0.06); }
+    .badge-mustard { color: #8a6e00; border-color: var(--mustard); background: rgba(237,195,62,0.12); }
+    .badge-plum { color: var(--plum); border-color: var(--plum); background: rgba(107,58,74,0.06); }
+    .badge-soft { color: var(--soft); border-color: var(--hair); background: transparent; }
+
+    /* ── Contacts grid ── */
+    #contactsGrid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .contact-card {
+      position: relative;
+      background: var(--paper-alt);
+      border: 1px solid var(--rule);
+      padding: 16px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      width: calc(50% - 6px);
+      min-width: 220px;
+      flex-shrink: 0;
+    }
+
+    @media (min-width: 1024px) {
+      .contact-card { width: 230px; }
+    }
+
+    .contact-card:hover { border-color: var(--rust); }
+
+    /* ── Org grid ── */
+    #orgsGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* ── Projects grid ── */
+    #projectsGrid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    @media (min-width: 1024px) {
+      #projectsGrid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* ── Network container ── */
+    #network-container {
+      background: var(--paper-alt);
+      border: 1px solid var(--rule);
+      overflow: hidden;
+      height: 75vh;
+    }
+
+    /* ── Panel overlay ── */
+    #slidePanel {
+      background: var(--paper);
+      border-left: 1px solid var(--rule);
+    }
+
+    /* ── Application panel ── */
+    #application-panel .ap-inner {
+      background: var(--paper);
+    }
+
+    /* ── Section heading ── */
+    .section-heading {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--soft);
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    /* ── Discover sites ── */
+    .discover-sites { margin-bottom: 10px; }
+
+    /* ── Progress bar ── */
+    .progress-track {
+      height: 2px;
+      background: rgba(42,31,10,0.1);
+    }
+    .progress-fill {
+      height: 2px;
+      transition: width 0.3s ease;
+    }
+
+    /* ── Details/summary reset ── */
+    details summary { list-style: none; cursor: pointer; }
+    details summary::-webkit-details-marker { display: none; }
+
+    /* ── Auto-priority banner ── */
+    #auto-priority-banner {
+      background: var(--butter);
+      border: 1px solid var(--mustard);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    /* ── Animations ── */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .animate-spin { animation: spin 1s linear infinite; }
+    .animate-pulse { animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+
+    /* ── Step dots (application panel) ── */
+    .step-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+    /* ── Scrollbar styling ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--hair); }
   </style>
 </head>
-<body class="bg-[#f5f3ee] h-screen flex overflow-hidden">
+<body>
 
 <!-- Loading bar -->
-<div class="fixed top-0 left-0 right-0 z-50 h-0.5 bg-gray-200 pointer-events-none">
-  <div id="loadingBar" class="h-full bg-[#e8b84b] w-0"></div>
+<div style="position:fixed;top:0;left:0;right:0;z-index:50;height:2px;background:var(--rule);pointer-events:none;">
+  <div id="loadingBar" style="height:100%;background:var(--rust);width:0;"></div>
 </div>
 
 <!-- Toast -->
-<div id="toast" class="fixed top-4 right-4 z-50 hidden px-4 py-2 rounded-full text-white text-sm font-medium shadow-lg transition-all"></div>
+<div id="toast" class="hidden" style="position:fixed;top:16px;right:16px;z-index:50;padding:8px 16px;color:var(--paper);font-size:12px;font-family:var(--font-sans);"></div>
 
 <!-- Sidebar -->
-<aside class="w-52 bg-gray-700 border-r border-gray-600 flex flex-col shrink-0">
-  <div class="p-5 border-b border-gray-700">
-    <h1 class="text-lg font-bold text-white">Actress CRM</h1>
-    <button onclick="showView('jonna')" id="nav-jonna"
-      class="nav-btn w-full text-left px-2 py-1.5 rounded-full text-sm font-medium flex items-center gap-2 text-gray-400 hover:text-white hover:bg-gray-800 mt-2 transition-colors">
-      <span>✨</span> Min profil
+<aside id="sidebar">
+  <div id="sidebar-brand">
+    <h1>Actress CRM</h1>
+    <div class="sub-brand">Karriärverktyg</div>
+    <button onclick="showView('jonna')" id="nav-jonna">
+      <span>✦</span> Min profil
     </button>
-    <div class="mt-2 px-1">
-      <div class="flex justify-between items-center mb-1">
-        <span class="text-xs text-gray-500">Profilstyrka</span>
-        <span id="profile-completeness-pct" class="text-xs text-gray-500 font-medium">–</span>
+    <div class="profile-strength-wrap">
+      <div class="profile-strength-label">
+        <span>Profilstyrka</span>
+        <span id="profile-completeness-pct">–</span>
       </div>
-      <div class="h-1.5 bg-gray-600 rounded-full overflow-hidden">
-        <div id="profile-completeness-fill" class="h-full rounded-full transition-all duration-500" style="width: 0%; background: #f43f5e;"></div>
+      <div class="profile-strength-track">
+        <div id="profile-completeness-fill" class="profile-strength-fill" style="width:0%;background:var(--rust);"></div>
       </div>
     </div>
   </div>
-  <nav class="flex-1 p-3 space-y-0.5">
-    <button onclick="showView('dashboard')" id="nav-dashboard"
-      class="nav-btn w-full text-left px-3 py-2 rounded-full text-sm font-medium flex items-center gap-2 bg-[#e8b84b]/20 text-[#b8882b] border-l-2 border-[#e8b84b] transition-colors">
-      <span>🏠</span> Dashboard
+
+  <nav>
+    <button onclick="showView('dashboard')" id="nav-dashboard" class="nav-btn nav-active">
+      Dashboard
     </button>
-    <button onclick="showView('contacts')" id="nav-contacts"
-      class="nav-btn w-full text-left px-3 py-2 rounded-full text-sm font-medium flex items-center gap-2 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
-      <span>👥</span> Kontakter
+    <button onclick="showView('contacts')" id="nav-contacts" class="nav-btn">
+      Kontakter
     </button>
-    <button onclick="showView('projects')" id="nav-projects"
-      class="nav-btn w-full text-left px-3 py-2 rounded-full text-sm font-medium flex items-center gap-2 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
-      <span>🎭</span> Projekt
+    <button onclick="showView('projects')" id="nav-projects" class="nav-btn">
+      Projekt
     </button>
-    <div class="border-t border-gray-700 my-2"></div>
-    <button onclick="showView('organizations')" id="nav-organizations"
-      class="nav-btn w-full text-left px-3 py-2 rounded-full text-sm font-medium flex items-center gap-2 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
-      <span>🏛️</span> Organisationer
+    <div class="nav-divider"></div>
+    <button onclick="showView('organizations')" id="nav-organizations" class="nav-btn">
+      Organisationer
     </button>
-    <button onclick="showView('discover')" id="nav-discover"
-      class="nav-btn w-full text-left px-3 py-2 rounded-full text-sm font-medium flex items-center gap-2 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
-      <span>🔍</span> Möjligheter
-      <span id="discover-badge" class="hidden ml-auto text-xs bg-[#e8b84b] text-white rounded-full px-1.5 py-0.5 font-bold leading-none"></span>
+    <button onclick="showView('discover')" id="nav-discover" class="nav-btn">
+      Möjligheter
+      <span id="discover-badge" class="hidden nav-badge"></span>
     </button>
-    <button onclick="showView('applications')" id="nav-applications"
-      class="nav-btn w-full text-left px-3 py-2 rounded-full text-sm font-medium flex items-center gap-2 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
-      <span>📝</span> Ansökningar
+    <button onclick="showView('applications')" id="nav-applications" class="nav-btn">
+      Ansökningar
     </button>
-    <button onclick="showView('network')" id="nav-network"
-      class="nav-btn w-full text-left px-3 py-2 rounded-full text-sm font-medium flex items-center gap-2 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
-      <span>🕸️</span> Nätverk
+    <button onclick="showView('network')" id="nav-network" class="nav-btn">
+      Nätverk
     </button>
   </nav>
+
+  <div id="sidebar-footer">Actress CRM · v2</div>
 </aside>
 
 <!-- Main content -->
-<main class="flex-1 overflow-y-auto">
+<main>
 
-  <!-- DASHBOARD VIEW -->
-  <div id="view-dashboard" class="p-6 max-w-4xl mx-auto">
-    <h2 class="text-xl font-bold text-gray-900 mb-6">Dashboard</h2>
-
-    <!-- Stipendienyheter -->
-    <div id="dash-stipend-news-wrap" class="mb-6">
-      <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">🏆 Stipendienyheter i ditt nätverk</h3>
-      <div id="dash-stipend-news" class="space-y-2"></div>
+  <!-- ═══════════════════════════════════════════════════════════
+       DASHBOARD VIEW
+  ═══════════════════════════════════════════════════════════ -->
+  <div id="view-dashboard">
+    <div class="masthead">
+      <div class="masthead-label">Översikt</div>
+      <div class="masthead-title">Dashboard</div>
+      <div class="masthead-meta">Dina viktigaste händelser och möjligheter</div>
     </div>
 
-    <!-- Row 1: Deadlines + Sparade -->
-    <div class="grid grid-cols-2 gap-6 mb-6">
-      <div>
-        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">⏰ Kommande deadlines</h3>
-        <div id="dash-deadlines" class="space-y-2"></div>
-      </div>
-      <div>
-        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">🔖 Sparade</h3>
-        <div id="dash-saved" class="space-y-2"></div>
-      </div>
-    </div>
+    <div class="view-body">
 
-    <!-- Row 2: Senaste fynd + Tumme upp -->
-    <div class="grid grid-cols-2 gap-6 mb-6">
-      <div>
-        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">🔥 Senaste intressanta fynd</h3>
-        <div id="dash-finds" class="space-y-2"></div>
+      <!-- Stipendienyheter -->
+      <div id="dash-stipend-news-wrap" style="margin-bottom:32px;">
+        <div class="section-heading">Stipendienyheter i ditt nätverk</div>
+        <div id="dash-stipend-news" class="space-y"></div>
       </div>
-      <div>
-        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">👍 Dina tumme upp</h3>
-        <div id="dash-liked" class="space-y-2"></div>
-      </div>
-    </div>
 
-    <!-- Row 3: Branschviktiga + Övriga att följa upp -->
-    <div class="grid grid-cols-2 gap-6 mb-6">
-      <div>
-        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">⭐ Branschviktiga — dags att höra av sig</h3>
-        <div id="dash-industry-star" class="space-y-2"></div>
-      </div>
-      <div>
-        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">🕐 Övriga att följa upp</h3>
-        <div id="dash-followup" class="space-y-2"></div>
-      </div>
-    </div>
-
-    <!-- Möjligheter -->
-    <div class="border-t pt-6">
-      <div class="flex justify-between items-center mb-3">
-        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide">🔍 Senaste möjligheter</h3>
-        <button onclick="showView('discover')" class="text-xs text-rose-600 hover:text-rose-800 font-medium">Visa alla →</button>
-      </div>
-      <div class="grid grid-cols-3 gap-4">
+      <!-- Row 1: Deadlines + Sparade -->
+      <div class="grid-2" style="margin-bottom:32px;">
         <div>
-          <div class="text-xs font-semibold text-gray-500 mb-2">Jobbannonser</div>
-          <div id="dash-opp-jobs" class="space-y-1.5"></div>
+          <div class="section-heading">Kommande deadlines</div>
+          <div id="dash-deadlines" class="space-y-sm"></div>
         </div>
         <div>
-          <div class="text-xs font-semibold text-gray-500 mb-2">Stipendiater</div>
-          <div id="dash-opp-stipends" class="space-y-1.5"></div>
+          <div class="section-heading">Sparade</div>
+          <div id="dash-saved" class="space-y-sm"></div>
+        </div>
+      </div>
+
+      <!-- Row 2: Senaste fynd + Tumme upp -->
+      <div class="grid-2" style="margin-bottom:32px;">
+        <div>
+          <div class="section-heading">Senaste intressanta fynd</div>
+          <div id="dash-finds" class="space-y-sm"></div>
         </div>
         <div>
-          <div class="text-xs font-semibold text-gray-500 mb-2">Projektbidrag</div>
-          <div id="dash-opp-grants" class="space-y-1.5"></div>
+          <div class="section-heading">Dina tumme upp</div>
+          <div id="dash-liked" class="space-y-sm"></div>
         </div>
+      </div>
+
+      <!-- Row 3: Branschviktiga + Övriga att följa upp -->
+      <div class="grid-2" style="margin-bottom:32px;">
+        <div>
+          <div class="section-heading">Branschviktiga — dags att höra av sig</div>
+          <div id="dash-industry-star" class="space-y-sm"></div>
+        </div>
+        <div>
+          <div class="section-heading">Övriga att följa upp</div>
+          <div id="dash-followup" class="space-y-sm"></div>
+        </div>
+      </div>
+
+      <!-- Möjligheter -->
+      <div style="border-top:1px solid var(--rule);padding-top:24px;">
+        <div class="flex-between" style="margin-bottom:16px;">
+          <div class="section-heading" style="margin-bottom:0;border-bottom:none;padding-bottom:0;">Senaste möjligheter</div>
+          <button onclick="showView('discover')" class="btn btn-ghost btn-sm">Visa alla →</button>
+        </div>
+        <div class="grid-3">
+          <div>
+            <div class="t-micro" style="color:var(--soft);margin-bottom:8px;">Jobbannonser</div>
+            <div id="dash-opp-jobs" class="space-y-sm"></div>
+          </div>
+          <div>
+            <div class="t-micro" style="color:var(--soft);margin-bottom:8px;">Stipendiater</div>
+            <div id="dash-opp-stipends" class="space-y-sm"></div>
+          </div>
+          <div>
+            <div class="t-micro" style="color:var(--soft);margin-bottom:8px;">Projektbidrag</div>
+            <div id="dash-opp-grants" class="space-y-sm"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CONTACTS VIEW
+  ═══════════════════════════════════════════════════════════ -->
+  <div id="view-contacts" class="hidden">
+    <div class="masthead">
+      <div class="flex-between">
+        <div>
+          <div class="masthead-label">CRM</div>
+          <div class="masthead-title">Kontakter <span id="contact-count" style="font-size:20px;color:var(--soft);font-style:normal;letter-spacing:0;"></span></div>
+        </div>
+        <div class="masthead-actions" style="margin-top:0;">
+          <button onclick="openAiRankModal()" class="btn btn-ghost btn-sm">AI-ranka branschvikt</button>
+          <button onclick="openBulkEnrichModal()" class="btn btn-ghost btn-sm">Berika grupp</button>
+          <button onclick="findDuplicates()" class="btn btn-ghost btn-sm">Hitta dubletter</button>
+          <button onclick="openNewContactPanel()" class="btn btn-accent">+ Ny kontakt</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view-body" style="max-width:1200px;">
+
+      <div id="auto-priority-banner" class="hidden">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink);">Sätt prioritet baserat på senaste kontakt</div>
+          <div class="t-small" style="color:var(--soft);margin-top:2px;">Går igenom alla kontakter och tilldelar 1–5 stjärnor efter hur nylig kontakten var. Görs bara en gång.</div>
+        </div>
+        <button onclick="runAutoPriority()" class="btn btn-primary btn-sm" style="flex-shrink:0;">Kör nu</button>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-row">
+        <input id="contactSearch" type="search" placeholder="Sök namn, roll, org…"
+          class="filter-input" oninput="loadContacts()">
+        <select id="roleFilter" onchange="loadContacts()" class="filter-select">
+          <option value="">Alla roller</option>
+          <option>Skådespelare</option>
+          <option>Mimskådespelare</option>
+          <option>Regissör</option>
+          <option>Konstnärlig ledare</option>
+          <option>Casting</option>
+          <option>Producent</option>
+          <option>Agent</option>
+          <option>Journalist</option>
+          <option>Övrigt</option>
+        </select>
+        <select id="priorityFilter" onchange="loadContacts()" class="filter-select">
+          <option value="">Alla prioriteter</option>
+          <option value="9">9 — Mycket varm</option>
+          <option value="8">8</option>
+          <option value="7">7</option>
+          <option value="6">6</option>
+          <option value="5">5 — Neutral</option>
+          <option value="4">4</option>
+          <option value="3">3</option>
+          <option value="2">2</option>
+          <option value="1">1 — Mycket kall</option>
+        </select>
+        <button id="industryStarFilterBtn" onclick="toggleIndustryStarFilter()" class="btn btn-ghost btn-sm">
+          Branschviktiga
+        </button>
+      </div>
+
+      <div id="contactsGrid"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ORGANIZATIONS VIEW
+  ═══════════════════════════════════════════════════════════ -->
+  <div id="view-organizations" class="hidden">
+    <div class="masthead">
+      <div class="flex-between">
+        <div>
+          <div class="masthead-label">CRM</div>
+          <div class="masthead-title">Organisationer</div>
+        </div>
+        <button onclick="openNewOrgPanel()" class="btn btn-accent">+ Ny organisation</button>
+      </div>
+      <div class="masthead-meta" style="margin-top:10px;">Teatrar, filmbolag och fria grupper. Kontakter kopplas hit via sin e-postdomän eller manuellt.</div>
+    </div>
+
+    <div class="view-body">
+      <div id="orgsGrid"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       PROJECTS VIEW
+  ═══════════════════════════════════════════════════════════ -->
+  <div id="view-projects" class="hidden">
+    <div class="masthead">
+      <div class="flex-between">
+        <div>
+          <div class="masthead-label">Produktion</div>
+          <div class="masthead-title">Projekt</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="importProjectsFromProfile()" id="import-projects-btn" class="btn btn-ghost btn-sm">✦ Importera från profil</button>
+          <button onclick="openNewProjectPanel()" class="btn btn-accent">+ Nytt projekt</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view-body">
+      <!-- Sökfält -->
+      <div style="margin-bottom:16px;">
+        <input id="projectSearch" type="text" placeholder="Sök projekt…"
+          oninput="filterProjects()" class="filter-input" style="max-width:360px;">
+      </div>
+
+      <!-- Status tabs -->
+      <div class="tab-row">
+        <button onclick="setProjectStatus('all')" id="ptab-all" class="tab-btn project-tab tab-active">Alla</button>
+        <button onclick="setProjectStatus('kommande')" id="ptab-kommande" class="tab-btn project-tab">Kommande</button>
+        <button onclick="setProjectStatus('i produktion')" id="ptab-produktion" class="tab-btn project-tab">I produktion</button>
+        <button onclick="setProjectStatus('avslutad')" id="ptab-avslutad" class="tab-btn project-tab">Avslutad</button>
+      </div>
+
+      <div id="projectsGrid"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       DISCOVER VIEW
+  ═══════════════════════════════════════════════════════════ -->
+  <div id="view-discover" class="hidden">
+    <div class="masthead">
+      <div class="masthead-label">AI-sökning</div>
+      <div class="masthead-title">Möjligheter</div>
+      <div class="masthead-meta">Jobbannonser och stipendiater inom teater och scenkonstbranschen</div>
+    </div>
+
+    <div class="view-body">
+      <!-- Tabs -->
+      <div class="tab-row">
+        <button onclick="setDiscoverTab('jobs')" id="dtab-jobs" class="tab-btn tab-active">Jobbannonser</button>
+        <button onclick="setDiscoverTab('castings')" id="dtab-castings" class="tab-btn">Casting call</button>
+        <button onclick="setDiscoverTab('stipends')" id="dtab-stipends" class="tab-btn">Stipendiater</button>
+        <button onclick="setDiscoverTab('grants')" id="dtab-grants" class="tab-btn">Projektbidrag</button>
+      </div>
+
+      <!-- Jobs tab -->
+      <div id="discover-tab-jobs" class="space-y">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
+          <div style="flex:1;">
+            <p class="t-small" style="color:var(--soft);margin-bottom:8px;">AI söker efter aktuella castingkall och tjänster inom svensk scenkonstbranschen.</p>
+            <div id="sites-jobs" class="discover-sites" data-tab="jobs"></div>
+          </div>
+          <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <button onclick="searchJobs()" id="search-jobs-btn" class="btn btn-primary">Sök nu</button>
+            <p id="search-status-jobs" class="t-micro" style="color:var(--soft);"></p>
+          </div>
+        </div>
+        <div id="jobs-list" class="space-y"></div>
+      </div>
+
+      <!-- Stipends tab -->
+      <div id="discover-tab-stipends" class="hidden space-y">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
+          <div style="flex:1;">
+            <p class="t-small" style="color:var(--soft);margin-bottom:8px;">AI söker efter stipendiater från Konstnärsnämnden, Kulturrådet och andra kulturstiftelser.</p>
+            <div id="sites-stipends" class="discover-sites" data-tab="stipends"></div>
+          </div>
+          <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <div style="display:flex;gap:6px;">
+              <button onclick="searchStipends(false)" id="search-stipends-btn" class="btn btn-primary">Sök nu</button>
+              <button onclick="searchStipends(true)" class="btn btn-ghost btn-sm" title="Rensa biblioteket och sök på nytt">↺ Rensa &amp; sök om</button>
+            </div>
+            <p id="search-status-stipends" class="t-micro" style="color:var(--soft);"></p>
+          </div>
+        </div>
+        <div id="stipends-list" class="space-y"></div>
+      </div>
+
+      <!-- Castings tab -->
+      <div id="discover-tab-castings" class="hidden space-y">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
+          <div style="flex:1;">
+            <p class="t-small" style="color:var(--soft);margin-bottom:8px;">AI söker efter öppna castingkall och auditions hos svenska teatrar, filmbolag och fria grupper.</p>
+          </div>
+          <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <div style="display:flex;gap:6px;">
+              <button onclick="searchCastings(false)" id="search-castings-btn" class="btn btn-primary">Sök nu</button>
+              <button onclick="searchCastings(true)" class="btn btn-ghost btn-sm" title="Rensa och sök på nytt">↺ Rensa &amp; sök om</button>
+            </div>
+            <p id="search-status-castings" class="t-micro" style="color:var(--soft);"></p>
+          </div>
+        </div>
+        <div id="castings-list" class="space-y"></div>
+      </div>
+
+      <!-- Grants tab -->
+      <div id="discover-tab-grants" class="hidden space-y">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
+          <div style="flex:1;">
+            <p class="t-small" style="color:var(--soft);margin-bottom:8px;">AI söker efter öppna bidrag och produktionsstöd som passar dig.</p>
+            <div id="sites-grants" class="discover-sites" data-tab="grants"></div>
+          </div>
+          <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <button onclick="searchGrants()" id="search-grants-btn" class="btn btn-primary">Sök nu</button>
+            <p id="search-status-grants" class="t-micro" style="color:var(--soft);"></p>
+          </div>
+        </div>
+        <div id="grants-list" class="space-y"></div>
       </div>
     </div>
   </div>
 
-  <!-- CONTACTS VIEW -->
-  <div id="view-contacts" class="hidden p-6 max-w-5xl 2xl:max-w-6xl mx-auto">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-bold text-gray-900">Kontakter <span id="contact-count" class="text-sm font-normal text-gray-400"></span></h2>
-      <div class="flex gap-2">
-        <button onclick="openAiRankModal()"
-          class="bg-white hover:bg-gray-50 text-gray-600 border px-4 py-2 rounded-full text-sm font-medium">
-          ● AI-ranka branschvikt
-        </button>
-        <button onclick="openBulkEnrichModal()"
-          class="bg-white hover:bg-gray-50 text-gray-600 border px-4 py-2 rounded-full text-sm font-medium">
-          🌐 Berika grupp
-        </button>
-        <button onclick="findDuplicates()"
-          class="bg-white hover:bg-gray-50 text-gray-600 border px-4 py-2 rounded-full text-sm font-medium">
-          Hitta dubletter
-        </button>
-        <button onclick="openNewContactPanel()"
-          class="bg-[#e8b84b] hover:bg-[#d4a33c] text-white px-4 py-2 rounded-full text-sm font-medium">
-          + Ny kontakt
-        </button>
-      </div>
-    </div>
-
-    <div id="auto-priority-banner" class="hidden mb-4 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between gap-4">
-      <div>
-        <div class="text-sm font-medium text-amber-800">Sätt prioritet baserat på senaste kontakt</div>
-        <div class="text-xs text-amber-600 mt-0.5">Går igenom alla kontakter och tilldelar 1–5 stjärnor efter hur nylig kontakten var. Görs bara en gång.</div>
-      </div>
-      <button onclick="runAutoPriority()" class="shrink-0 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-full text-sm font-medium">Kör nu</button>
-    </div>
-
-    <!-- Filters -->
-    <div class="flex gap-3 mb-4 flex-wrap">
-      <input id="contactSearch" type="search" placeholder="Sök namn, roll, org…"
-        class="border rounded-xl px-3 py-1.5 text-sm flex-1 min-w-48"
-        oninput="loadContacts()">
-      <select id="roleFilter" onchange="loadContacts()"
-        class="border rounded-xl px-3 py-1.5 text-sm">
-        <option value="">Alla roller</option>
-        <option>Skådespelare</option>
-        <option>Mimskådespelare</option>
-        <option>Regissör</option>
-        <option>Konstnärlig ledare</option>
-        <option>Casting</option>
-        <option>Producent</option>
-        <option>Agent</option>
-        <option>Journalist</option>
-        <option>Övrigt</option>
-      </select>
-      <select id="priorityFilter" onchange="loadContacts()"
-        class="border rounded-xl px-3 py-1.5 text-sm">
-        <option value="">Alla prioriteter</option>
-        <option value="9">9 — Mycket varm</option>
-        <option value="8">8</option>
-        <option value="7">7</option>
-        <option value="6">6</option>
-        <option value="5">5 — Neutral</option>
-        <option value="4">4</option>
-        <option value="3">3</option>
-        <option value="2">2</option>
-        <option value="1">1 — Mycket kall</option>
-      </select>
-      <button id="industryStarFilterBtn" onclick="toggleIndustryStarFilter()"
-        class="border rounded-xl px-3 py-1.5 text-sm bg-white text-gray-600 border-gray-300 hover:border-amber-400">
-        ● Branschviktiga
-      </button>
-    </div>
-
-    <div id="contactsGrid" class="flex flex-wrap gap-3"></div>
-  </div>
-
-  <!-- ORGANIZATIONS VIEW -->
-  <div id="view-organizations" class="hidden p-6 max-w-5xl mx-auto">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-bold text-gray-900">Organisationer</h2>
-      <button onclick="openNewOrgPanel()"
-        class="bg-[#e8b84b] hover:bg-[#d4a33c] text-white px-4 py-2 rounded-full text-sm font-medium">
-        + Ny organisation
-      </button>
-    </div>
-    <p class="text-sm text-gray-400 mb-4">Teatrar, filmbolag och fria grupper. Kontakter kopplas hit via sin e-postdomän eller manuellt.</p>
-    <div id="orgsGrid" class="grid grid-cols-1 gap-3 lg:grid-cols-2"></div>
-  </div>
-
-  <!-- PROJECTS VIEW -->
-  <div id="view-projects" class="hidden p-6 max-w-5xl mx-auto">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-bold text-gray-900">Projekt</h2>
-      <div class="flex gap-2">
-        <button onclick="importProjectsFromProfile()" id="import-projects-btn"
-          class="border border-purple-300 text-purple-600 hover:bg-purple-50 px-4 py-2 rounded-full text-sm font-medium">
-          ✨ Importera från profil
-        </button>
-        <button onclick="openNewProjectPanel()"
-          class="bg-[#e8b84b] hover:bg-[#d4a33c] text-white px-4 py-2 rounded-full text-sm font-medium">
-          + Nytt projekt
-        </button>
-      </div>
-    </div>
-
-    <!-- Sökfält -->
-    <div class="mb-4">
-      <input id="projectSearch" type="text" placeholder="Sök projekt…"
-        oninput="filterProjects()"
-        class="w-full border rounded-xl px-3 py-2 text-sm text-gray-700 placeholder-gray-400">
-    </div>
-
-    <!-- Status tabs -->
-    <div class="flex gap-1 mb-5 border-b">
-      <button onclick="setProjectStatus('all')" id="ptab-all"
-        class="project-tab px-4 py-2 text-sm font-medium border-b-2 border-[#e8b84b] text-[#b8882b]">
-        Alla
-      </button>
-      <button onclick="setProjectStatus('kommande')" id="ptab-kommande"
-        class="project-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-        Kommande
-      </button>
-      <button onclick="setProjectStatus('i produktion')" id="ptab-produktion"
-        class="project-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-        I produktion
-      </button>
-      <button onclick="setProjectStatus('avslutad')" id="ptab-avslutad"
-        class="project-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-        Avslutad
-      </button>
-    </div>
-
-    <div id="projectsGrid" class="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-4"></div>
-  </div>
-
-  <!-- DISCOVER VIEW -->
-  <div id="view-discover" class="hidden p-6 max-w-4xl mx-auto">
-    <div class="flex justify-between items-center mb-6">
-      <div>
-        <h2 class="text-xl font-bold text-gray-900">Möjligheter</h2>
-        <p class="text-xs text-gray-400 mt-0.5">Jobbannonser och stipendiater inom teater och scenkonstbranschen</p>
-      </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="flex gap-1 mb-6 border-b">
-      <button onclick="setDiscoverTab('jobs')" id="dtab-jobs"
-        class="discover-tab px-4 py-2 text-sm font-medium border-b-2 border-[#e8b84b] text-[#b8882b]">Jobbannonser</button>
-      <button onclick="setDiscoverTab('castings')" id="dtab-castings"
-        class="discover-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Casting call</button>
-      <button onclick="setDiscoverTab('stipends')" id="dtab-stipends"
-        class="discover-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Stipendiater</button>
-      <button onclick="setDiscoverTab('grants')" id="dtab-grants"
-        class="discover-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Projektbidrag</button>
-    </div>
-
-    <!-- Jobs tab -->
-    <div id="discover-tab-jobs" class="space-y-4">
-      <div class="flex justify-between items-start gap-4">
-        <div class="flex-1">
-          <p class="text-sm text-gray-500 mb-2">AI söker efter aktuella castingkall och tjänster inom svensk scenkonstbranschen.</p>
-          <div id="sites-jobs" class="discover-sites" data-tab="jobs"></div>
+  <!-- ═══════════════════════════════════════════════════════════
+       JONNA PROFILE VIEW
+  ═══════════════════════════════════════════════════════════ -->
+  <div id="view-jonna" class="hidden">
+    <div class="masthead">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div class="relative group" style="position:relative;cursor:pointer;" onclick="document.getElementById('jonna-photo-input').click()" title="Klicka för att byta profilbild">
+          <div id="jonna-avatar" style="width:52px;height:52px;border:2px solid var(--rule);background:var(--butter);color:var(--rust);display:flex;align-items:center;justify-content:center;font-family:var(--font-serif);font-size:22px;font-style:italic;overflow:hidden;">J</div>
+          <input type="file" id="jonna-photo-input" accept="image/*" class="hidden" onchange="uploadJonnaPhoto(this)">
         </div>
-        <div class="shrink-0 flex flex-col items-end gap-1">
-          <button onclick="searchJobs()" id="search-jobs-btn"
-            class="bg-[#e8b84b] hover:bg-[#d4a33c] text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-            <span>🔍</span> Sök nu
-          </button>
-          <p id="search-status-jobs" class="text-xs text-gray-400"></p>
+        <div>
+          <div class="masthead-label">Profil</div>
+          <div class="masthead-title" id="jonna-header-name">Jonna</div>
+          <div class="masthead-meta">Din profil, CV och AI-inlärning</div>
         </div>
       </div>
-      <div id="jobs-list" class="space-y-3"></div>
     </div>
 
-    <!-- Stipends tab -->
-    <div id="discover-tab-stipends" class="hidden space-y-4">
-      <div class="flex justify-between items-start gap-4">
-        <div class="flex-1">
-          <p class="text-sm text-gray-500 mb-2">AI söker efter stipendiater från Konstnärsnämnden, Kulturrådet och andra kulturstiftelser.</p>
-          <div id="sites-stipends" class="discover-sites" data-tab="stipends"></div>
-        </div>
-        <div class="shrink-0 flex flex-col items-end gap-1">
-          <div class="flex gap-2">
-            <button onclick="searchStipends(false)" id="search-stipends-btn"
-              class="bg-[#e8b84b] hover:bg-[#d4a33c] text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-              <span>🔍</span> Sök nu
-            </button>
-            <button onclick="searchStipends(true)"
-              class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-2 rounded-full text-sm font-medium" title="Rensa biblioteket och sök på nytt">
-              ↺ Rensa &amp; sök om
-            </button>
-          </div>
-          <p id="search-status-stipends" class="text-xs text-gray-400"></p>
-        </div>
-      </div>
-      <div id="stipends-list" class="space-y-3"></div>
-    </div>
-
-    <!-- Castings tab -->
-    <div id="discover-tab-castings" class="hidden space-y-4">
-      <div class="flex justify-between items-start gap-4">
-        <div class="flex-1">
-          <p class="text-sm text-gray-500 mb-2">AI söker efter öppna castingkall och auditions hos svenska teatrar, filmbolag och fria grupper.</p>
-        </div>
-        <div class="shrink-0 flex flex-col items-end gap-1">
-          <div class="flex gap-2">
-            <button onclick="searchCastings(false)" id="search-castings-btn"
-              class="bg-[#e8b84b] hover:bg-[#d4a33c] text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-              <span>🎭</span> Sök nu
-            </button>
-            <button onclick="searchCastings(true)"
-              class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-2 rounded-full text-sm font-medium" title="Rensa och sök på nytt">
-              ↺ Rensa &amp; sök om
-            </button>
-          </div>
-          <p id="search-status-castings" class="text-xs text-gray-400"></p>
-        </div>
-      </div>
-      <div id="castings-list" class="space-y-3"></div>
-    </div>
-
-    <!-- Grants tab -->
-    <div id="discover-tab-grants" class="hidden space-y-4">
-      <div class="flex justify-between items-start gap-4">
-        <div class="flex-1">
-          <p class="text-sm text-gray-500 mb-2">AI söker efter öppna bidrag och produktionsstöd som passar dig.</p>
-          <div id="sites-grants" class="discover-sites" data-tab="grants"></div>
-        </div>
-        <div class="shrink-0 flex flex-col items-end gap-1">
-          <button onclick="searchGrants()" id="search-grants-btn"
-            class="bg-[#e8b84b] hover:bg-[#d4a33c] text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-            <span>🔍</span> Sök nu
-          </button>
-          <p id="search-status-grants" class="text-xs text-gray-400"></p>
-        </div>
-      </div>
-      <div id="grants-list" class="space-y-3"></div>
-    </div>
-  </div>
-
-  <!-- JONNA PROFILE VIEW -->
-  <div id="view-jonna" class="hidden p-6 max-w-3xl mx-auto">
-    <div class="flex items-center gap-4 mb-6">
-      <div class="relative group shrink-0 cursor-pointer" onclick="document.getElementById('jonna-photo-input').click()" title="Klicka för att byta profilbild">
-        <div id="jonna-avatar" class="w-14 h-14 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-2xl font-bold overflow-hidden">J</div>
-        <div class="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <span class="text-white text-lg">📷</span>
-        </div>
-        <input type="file" id="jonna-photo-input" accept="image/*" class="hidden" onchange="uploadJonnaPhoto(this)">
-      </div>
-      <div>
-        <h2 id="jonna-header-name" class="text-xl font-bold text-gray-900">Jonna</h2>
-        <p class="text-xs text-gray-400 mt-0.5">Din profil, CV och AI-inlärning</p>
-      </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="flex gap-1 mb-6 border-b">
-      <button onclick="setJonnaTab('cv')" id="jtab-cv"
-        class="jonna-tab px-4 py-2 text-sm font-medium border-b-2 border-[#e8b84b] text-[#b8882b]">Profil & CV</button>
-      <button onclick="setJonnaTab('letters')" id="jtab-letters"
-        class="jonna-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Brev & Skrivstil</button>
-      <button onclick="setJonnaTab('network')" id="jtab-network"
-        class="jonna-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Skolnätverk</button>
-      <button onclick="setJonnaTab('email')" id="jtab-email"
-        class="jonna-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">E-post</button>
-      <button onclick="setJonnaTab('infobank')" id="jtab-infobank"
-        class="jonna-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Infobank</button>
-    </div>
-
-    <!-- Tab: Profil & CV -->
-    <div id="jonna-tab-cv" class="space-y-4">
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <h3 class="text-sm font-semibold text-gray-700 mb-3">Bio</h3>
-        <textarea id="jonna-bio" rows="3" placeholder="Skriv en kort bio om dig själv…"
-          class="w-full border rounded-xl px-3 py-2 text-sm resize-none"></textarea>
-        <button onclick="saveJonnaBio()" class="mt-2 bg-[#e8b84b] hover:bg-[#d4a33c] text-white px-4 py-1.5 rounded-full text-sm font-medium">Spara bio</button>
+    <div class="view-body" style="max-width:760px;">
+      <!-- Tabs -->
+      <div class="tab-row">
+        <button onclick="setJonnaTab('cv')" id="jtab-cv" class="tab-btn jonna-tab tab-active">Profil & CV</button>
+        <button onclick="setJonnaTab('letters')" id="jtab-letters" class="tab-btn jonna-tab">Brev & Skrivstil</button>
+        <button onclick="setJonnaTab('network')" id="jtab-network" class="tab-btn jonna-tab">Skolnätverk</button>
+        <button onclick="setJonnaTab('email')" id="jtab-email" class="tab-btn jonna-tab">E-post</button>
+        <button onclick="setJonnaTab('infobank')" id="jtab-infobank" class="tab-btn jonna-tab">Infobank</button>
       </div>
 
-      <!-- Skådespelarattribut -->
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <div class="flex items-center justify-between mb-3">
-          <div>
-            <h3 class="text-sm font-semibold text-gray-700">Skådespelarattribut</h3>
-            <p class="text-xs text-gray-400 mt-0.5">Används av AI för att matcha och skriva ansökningar</p>
-          </div>
-          <button onclick="saveActorAttributes()" class="text-xs bg-[#e8b84b] hover:bg-[#e8b84b] text-white px-3 py-1.5 rounded-full font-medium transition-colors">Spara</button>
+      <!-- Tab: Profil & CV -->
+      <div id="jonna-tab-cv" class="space-y">
+        <div class="card-ink" style="border-top:2px solid var(--rust);">
+          <div class="section-heading">Bio</div>
+          <textarea id="jonna-bio" rows="3" placeholder="Skriv en kort bio om dig själv…" class="f-input" style="resize:none;"></textarea>
+          <button onclick="saveJonnaBio()" class="btn btn-primary btn-sm" style="margin-top:8px;">Spara bio</button>
         </div>
-        <div class="grid grid-cols-2 gap-3 mb-4">
-          <div>
-            <label class="text-xs font-medium text-gray-500 block mb-1">Längd (cm)</label>
-            <input id="attr-height" type="number" placeholder="168" class="w-full border rounded-xl px-3 py-1.5 text-sm focus:border-rose-400">
+
+        <!-- Skådespelarattribut -->
+        <div class="card-ink" style="border-top:2px solid var(--marine);">
+          <div class="flex-between" style="margin-bottom:12px;">
+            <div>
+              <div class="section-heading" style="margin-bottom:2px;border-bottom:none;padding-bottom:0;">Skådespelarattribut</div>
+              <div class="t-micro" style="color:var(--soft);">Används av AI för att matcha och skriva ansökningar</div>
+            </div>
+            <button onclick="saveActorAttributes()" class="btn btn-primary btn-sm">Spara</button>
           </div>
-          <div>
-            <label class="text-xs font-medium text-gray-500 block mb-1">Spelålder (t.ex. 25–35)</label>
-            <input id="attr-playing-age" type="text" placeholder="25–35" class="w-full border rounded-xl px-3 py-1.5 text-sm focus:border-rose-400">
-          </div>
-          <div>
-            <label class="text-xs font-medium text-gray-500 block mb-1">Hårfärg</label>
-            <input id="attr-hair" type="text" placeholder="Mörkt" class="w-full border rounded-xl px-3 py-1.5 text-sm focus:border-rose-400">
-          </div>
-          <div>
-            <label class="text-xs font-medium text-gray-500 block mb-1">Ögonfärg</label>
-            <input id="attr-eyes" type="text" placeholder="Brunt" class="w-full border rounded-xl px-3 py-1.5 text-sm focus:border-rose-400">
-          </div>
-          <div>
-            <label class="text-xs font-medium text-gray-500 block mb-1">Rösttyp</label>
-            <input id="attr-voice" type="text" placeholder="Alt / Mezzosopran" class="w-full border rounded-xl px-3 py-1.5 text-sm focus:border-rose-400">
-          </div>
-          <div>
-            <label class="text-xs font-medium text-gray-500 block mb-1">Sångregister</label>
-            <input id="attr-singing-range" type="text" placeholder="Alt–Mezzosopran" class="w-full border rounded-xl px-3 py-1.5 text-sm focus:border-rose-400">
-          </div>
-          <div>
-            <label class="text-xs font-medium text-gray-500 block mb-1">Fackförbund</label>
-            <input id="attr-union" type="text" placeholder="Teaterförbundet" class="w-full border rounded-xl px-3 py-1.5 text-sm focus:border-rose-400">
-          </div>
-          <div class="flex items-end gap-4 pb-1">
-            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-              <input id="attr-singing" type="checkbox" class="rounded"> Sång
-            </label>
-            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-              <input id="attr-license" type="checkbox" class="rounded"> Körkort
-            </label>
-          </div>
-        </div>
-        <div class="space-y-3">
-          <div>
-            <label class="text-xs font-medium text-gray-500 block mb-1.5">Språk</label>
-            <div id="attr-languages-tags" class="flex flex-wrap gap-1.5 mb-1.5"></div>
-            <div class="flex gap-2">
-              <input id="attr-lang-input" type="text" placeholder="Lägg till språk…" class="flex-1 border rounded-xl px-2 py-1.5 text-xs focus:border-rose-400"
-                onkeydown="if(event.key==='Enter'){addAttrTag('languages','attr-lang-input');event.preventDefault()}">
-              <button onclick="addAttrTag('languages','attr-lang-input')" class="text-xs border border-gray-300 px-2 py-1.5 rounded-full hover:bg-gray-50">+</button>
+          <div class="f-grid-2" style="margin-bottom:16px;">
+            <div class="f-group"><label class="f-label">Längd (cm)</label><input id="attr-height" type="number" placeholder="168" class="f-input"></div>
+            <div class="f-group"><label class="f-label">Spelålder (t.ex. 25–35)</label><input id="attr-playing-age" type="text" placeholder="25–35" class="f-input"></div>
+            <div class="f-group"><label class="f-label">Hårfärg</label><input id="attr-hair" type="text" placeholder="Mörkt" class="f-input"></div>
+            <div class="f-group"><label class="f-label">Ögonfärg</label><input id="attr-eyes" type="text" placeholder="Brunt" class="f-input"></div>
+            <div class="f-group"><label class="f-label">Rösttyp</label><input id="attr-voice" type="text" placeholder="Alt / Mezzosopran" class="f-input"></div>
+            <div class="f-group"><label class="f-label">Sångregister</label><input id="attr-singing-range" type="text" placeholder="Alt–Mezzosopran" class="f-input"></div>
+            <div class="f-group"><label class="f-label">Fackförbund</label><input id="attr-union" type="text" placeholder="Teaterförbundet" class="f-input"></div>
+            <div class="f-group" style="display:flex;align-items:flex-end;gap:16px;padding-bottom:4px;">
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;"><input id="attr-singing" type="checkbox"> Sång</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;"><input id="attr-license" type="checkbox"> Körkort</label>
             </div>
           </div>
-          <div>
-            <label class="text-xs font-medium text-gray-500 block mb-1.5">Dialekter</label>
-            <div id="attr-dialects-tags" class="flex flex-wrap gap-1.5 mb-1.5"></div>
-            <div class="flex gap-2">
-              <input id="attr-dialect-input" type="text" placeholder="Lägg till dialekt…" class="flex-1 border rounded-xl px-2 py-1.5 text-xs focus:border-rose-400"
-                onkeydown="if(event.key==='Enter'){addAttrTag('dialects','attr-dialect-input');event.preventDefault()}">
-              <button onclick="addAttrTag('dialects','attr-dialect-input')" class="text-xs border border-gray-300 px-2 py-1.5 rounded-full hover:bg-gray-50">+</button>
-            </div>
-          </div>
-          <div>
-            <label class="text-xs font-medium text-gray-500 block mb-1.5">Rörelseskicklighet</label>
-            <div id="attr-movement-tags" class="flex flex-wrap gap-1.5 mb-1.5"></div>
-            <div class="flex gap-2">
-              <input id="attr-movement-input" type="text" placeholder="T.ex. kontaktimprovisation, klassisk balett…" class="flex-1 border rounded-xl px-2 py-1.5 text-xs focus:border-rose-400"
-                onkeydown="if(event.key==='Enter'){addAttrTag('movement_skills','attr-movement-input');event.preventDefault()}">
-              <button onclick="addAttrTag('movement_skills','attr-movement-input')" class="text-xs border border-gray-300 px-2 py-1.5 rounded-full hover:bg-gray-50">+</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Konstnärligt statement -->
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <h3 class="text-sm font-semibold text-gray-700 mb-1">Konstnärligt statement</h3>
-        <p class="text-xs text-gray-400 mb-3">Beskriv din konstnärliga riktning, drivkraft och vision. AI använder detta som grund i ansökningar.</p>
-        <textarea id="jonna-artistic-statement" rows="6" placeholder="Vad driver dig konstnärligt? Vad söker du i ett projekt? Hur arbetar du med din roll?…"
-          class="w-full border rounded-xl px-3 py-2 text-sm resize-y leading-relaxed focus:border-rose-400"></textarea>
-        <button onclick="saveArtisticStatement()" class="mt-2 bg-[#e8b84b] hover:bg-[#e8b84b] text-white px-4 py-1.5 rounded-full text-sm font-medium transition-colors">Spara</button>
-      </div>
-
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <h3 class="text-sm font-semibold text-gray-700 mb-1">CV</h3>
-        <p class="text-xs text-gray-400 mb-3">Klistra in ditt CV som fritext. AI extraherar utbildningar, produktioner och organisationer — och används för att hitta kopplingar i ditt nätverk.</p>
-        <textarea id="jonna-cv-raw" rows="12" placeholder="Klistra in ditt CV här…"
-          class="w-full border rounded-xl px-3 py-2 text-sm font-mono resize-y"></textarea>
-        <button onclick="parseJonnaCV()" id="parse-cv-btn"
-          class="mt-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-1.5 rounded-full text-sm font-medium">
-          Analysera CV med AI ✨
-        </button>
-        <div id="jonna-cv-parsed" class="hidden mt-5 pt-4 border-t space-y-4"></div>
-      </div>
-
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <h3 class="text-sm font-semibold text-gray-700 mb-1">Kompetenser</h3>
-        <p class="text-xs text-gray-400 mb-3">AI-hittade och manuellt tillagda kompetenser. Används av AI vid jobbsök och bidragssök.</p>
-        <div id="skills-container" class="flex flex-wrap gap-1.5 mb-3"></div>
-        <div class="flex gap-2">
-          <input id="skill-input" type="text" placeholder="Lägg till kompetens…"
-            class="flex-1 border rounded-xl px-3 py-1.5 text-sm"
-            onkeydown="if(event.key==='Enter') addManualSkill()">
-          <button onclick="addManualSkill()"
-            class="border border-gray-300 px-3 py-1.5 rounded-full text-sm hover:bg-gray-50">+ Lägg till</button>
-        </div>
-      </div>
-
-      <!-- Produktioner -->
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <h3 class="text-sm font-semibold text-gray-700 mb-1">Produktioner</h3>
-        <p class="text-xs text-gray-400 mb-3">Samlade från CV, AI-sökning och manuellt tillagda.</p>
-        <div id="productions-list" class="space-y-1 mb-3"></div>
-        <details>
-          <summary class="text-xs font-medium text-rose-600 cursor-pointer hover:text-rose-800">+ Lägg till produktion</summary>
-          <div class="mt-3 grid grid-cols-2 gap-2">
-            <input id="prod-title" type="text" placeholder="Titel *" class="col-span-2 border rounded-xl px-3 py-1.5 text-sm">
-            <input id="prod-theater" type="text" placeholder="Teater / Bolag" class="border rounded-xl px-3 py-1.5 text-sm">
-            <input id="prod-year" type="text" placeholder="År" class="border rounded-xl px-3 py-1.5 text-sm">
-            <input id="prod-role" type="text" placeholder="Roll" class="col-span-2 border rounded-xl px-3 py-1.5 text-sm">
-            <button onclick="addManualProduction()" class="col-span-2 bg-[#e8b84b] hover:bg-[#d4a33c] text-white py-1.5 rounded-full text-sm font-medium">Lägg till</button>
-          </div>
-        </details>
-      </div>
-
-      <!-- Utbildning -->
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <h3 class="text-sm font-semibold text-gray-700 mb-1">Utbildning</h3>
-        <p class="text-xs text-gray-400 mb-3">Samlade från CV, AI-sökning och manuellt tillagda.</p>
-        <div id="education-list" class="space-y-1 mb-3"></div>
-        <details>
-          <summary class="text-xs font-medium text-rose-600 cursor-pointer hover:text-rose-800">+ Lägg till utbildning</summary>
-          <div class="mt-3 grid grid-cols-2 gap-2">
-            <input id="edu-school" type="text" placeholder="Skola / Utbildning *" class="col-span-2 border rounded-xl px-3 py-1.5 text-sm">
-            <input id="edu-years" type="text" placeholder="År (t.ex. 2001–2004)" class="col-span-2 border rounded-xl px-3 py-1.5 text-sm">
-            <button onclick="addManualEducation()" class="col-span-2 bg-[#e8b84b] hover:bg-[#d4a33c] text-white py-1.5 rounded-full text-sm font-medium">Lägg till</button>
-          </div>
-        </details>
-      </div>
-
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <h3 class="text-sm font-semibold text-gray-700 mb-1">Sök om mig på webben</h3>
-        <p class="text-xs text-gray-400 mb-4">AI söker på ditt namn med olika söktermer och extraherar produktioner, utbildning och bilder som du kan importera till CV:et.</p>
-
-        <div class="mb-3">
-          <label class="text-xs font-medium text-gray-500 block mb-1">Ditt fullständiga namn</label>
-          <input id="jonna-search-name" type="text" placeholder="Jonna Ljunggren"
-            class="w-full border rounded-xl px-3 py-2 text-sm">
-        </div>
-
-        <div class="mb-4">
-          <label class="text-xs font-medium text-gray-500 block mb-2">Söktermer — välj de som stämmer, lägg till egna</label>
-          <div id="search-tags-container" class="flex flex-wrap gap-1.5 mb-2"></div>
-          <div class="flex gap-2 mt-2">
-            <input id="custom-tag-input" type="text" placeholder="Lägg till eget sökord…"
-              class="flex-1 border rounded-xl px-2 py-1.5 text-xs"
-              onkeydown="if(event.key==='Enter') addCustomSearchTag()">
-            <button onclick="addCustomSearchTag()"
-              class="text-xs border border-gray-300 px-3 py-1.5 rounded-full hover:bg-gray-50">+ Lägg till</button>
-          </div>
-        </div>
-
-        <button onclick="runSelfSearch()" id="run-search-btn"
-          class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-full text-sm font-medium mb-4">
-          Sök på webben ✨
-        </button>
-
-        <div id="self-search-results"></div>
-      </div>
-
-      <!-- Djupdykning -->
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <h3 class="text-sm font-semibold text-gray-700 mb-1">Djupdykning om Jonna</h3>
-        <p class="text-xs text-gray-400 mb-4">AI söker brett efter intervjuer, artiklar, omnämnanden och profiler. Resultatet sparas och byggs på vid varje sökning.</p>
-        <button onclick="runJonnaDeepSearch()" id="deep-search-btn"
-          class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-full text-sm font-medium mb-4">
-          🔍 Kör djupdykning
-        </button>
-        <div id="deep-search-results"></div>
-      </div>
-    </div>
-
-    <!-- Tab: Brev & Skrivstil -->
-    <div id="jonna-tab-letters" class="hidden space-y-4">
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <h3 class="text-sm font-semibold text-gray-700 mb-1">Personliga brev & texter</h3>
-        <p class="text-xs text-gray-400 mb-4">Lägg till brev och texter du skrivit. AI analyserar din röst och stil för att sedan generera uppföljningsförslag som låter som du.</p>
-        <div id="jonna-letters-list" class="space-y-3 mb-4"></div>
-        <details>
-          <summary class="text-xs font-medium text-rose-600 cursor-pointer hover:text-rose-800">+ Lägg till brev eller text</summary>
-          <div class="mt-3 space-y-2">
-            <textarea id="new-letter-text" rows="7" placeholder="Klistra in ett brev, sökbrev, mail eller annan text du skrivit…"
-              class="w-full border rounded-xl px-3 py-2 text-sm resize-y"></textarea>
-            <button onclick="addJonnaLetter()"
-              class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-medium">
-              Lägg till
-            </button>
-          </div>
-        </details>
-      </div>
-
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <div class="flex justify-between items-center mb-3">
-          <div>
-            <h3 class="text-sm font-semibold text-gray-700">Skrivstilsanalys</h3>
-            <p class="text-xs text-gray-400 mt-0.5">Genereras från dina brev och används automatiskt i AI-uppföljningar</p>
-          </div>
-          <button onclick="analyzeWritingStyle()" id="analyze-style-btn"
-            class="text-xs bg-purple-50 text-purple-700 hover:bg-purple-100 px-3 py-1.5 rounded-full font-medium whitespace-nowrap">
-            Analysera ✨
-          </button>
-        </div>
-        <div id="jonna-writing-style" class="text-sm text-gray-400 italic">
-          Ingen analys ännu. Lägg till brev och klicka Analysera.
-        </div>
-      </div>
-
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <h3 class="text-sm font-semibold text-gray-700 mb-1">Ansökningsexempel (AI-mall)</h3>
-        <p class="text-xs text-gray-400 mb-4">Ansökningar sparade härifrån används av AI för att lära sig din stil och ton i ansökningssammanhang. Sparas automatiskt när du klickar "Spara som mall" i ansökningspanelen.</p>
-        <div id="application-samples-list" class="space-y-3 mb-4">
-          <p class="text-xs text-gray-400 italic">Inga ansökningsexempel ännu. Skriv en ansökan och spara den som mall.</p>
-        </div>
-        <details>
-          <summary class="text-xs font-medium text-rose-600 cursor-pointer hover:text-rose-700">+ Lägg till manuellt</summary>
-          <div class="mt-3 space-y-2">
-            <input id="sample-title" type="text" placeholder="Titel, t.ex. Personligt brev — Riksteatern 2024" class="w-full border rounded-xl px-3 py-1.5 text-sm focus:border-rose-400">
-            <textarea id="sample-text" rows="6" placeholder="Klistra in en tidigare ansökan eller ett personligt brev…"
-              class="w-full border rounded-xl px-3 py-2 text-sm resize-y focus:border-rose-400"></textarea>
-            <button onclick="addApplicationSample()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-medium">Lägg till</button>
-          </div>
-        </details>
-      </div>
-    </div>
-
-    <!-- Tab: Skolnätverk -->
-    <div id="jonna-tab-network" class="hidden">
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <div class="flex justify-between items-center mb-3">
-          <div>
-            <h3 class="text-sm font-semibold text-gray-700">Skolnätverkskopplingar</h3>
-            <p class="text-xs text-gray-400 mt-0.5">Kontakter som gått på samma utbildningar som du</p>
-          </div>
-          <button onclick="loadSchoolNetwork()"
-            class="text-xs bg-purple-50 text-purple-700 hover:bg-purple-100 px-3 py-1.5 rounded-full font-medium">
-            Uppdatera
-          </button>
-        </div>
-        <div id="jonna-school-network">
-          <p class="text-sm text-gray-400">Analysera ditt CV (fliken Profil & CV) för att se nätverkskopplingar via skolor.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tab: E-post -->
-    <div id="jonna-tab-email" class="hidden space-y-4">
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <h3 class="text-sm font-semibold text-gray-700 mb-3">Importera .mbox-filer</h3>
-        <div class="flex gap-4">
-          <div class="flex-1 flex flex-col justify-between">
-            <p class="text-xs text-gray-400 mb-4">Exportera Inkorg och Skickat från Mac Mail-appen.<br>(Fil → Exportera brevlåda) och ladda upp filerna här.<br>Du kan välja flera filer samtidigt.</p>
-            <div class="flex items-center gap-2">
-              <label class="text-xs font-medium text-gray-500 shrink-0">Senaste</label>
-              <select id="mbox-years" class="border rounded-xl px-2 py-1.5 text-sm">
-                <option value="1">1 år</option>
-                <option value="2">2 år</option>
-                <option value="3">3 år</option>
-                <option value="5">5 år</option>
-                <option value="10" selected>10 år</option>
-                <option value="15">15 år</option>
-                <option value="20">20 år</option>
-                <option value="0">Alla år</option>
-              </select>
-            </div>
-          </div>
-          <div class="w-1/2 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 hover:border-rose-300 transition cursor-pointer" onclick="document.getElementById('mbox-input').click()">
-            <div class="text-2xl">📬</div>
-            <div class="text-sm text-gray-600 font-medium">Välj .mbox-filer</div>
-            <div class="text-xs text-gray-400 text-center px-3">Öppna Inkorg.mbox → välj "mbox"</div>
-            <input id="mbox-input" type="file" accept="*" multiple class="hidden" onchange="importMboxFiles(this.files)">
-          </div>
-        </div>
-        <div id="mbox-import-result" class="hidden mt-3 text-sm text-gray-600 bg-blue-50 border border-blue-100 rounded-full px-4 py-3"></div>
-      </div>
-
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-4">
-        <div class="text-sm font-semibold text-gray-700 mb-1">Jonnas egna e-postadresser</div>
-        <p class="text-xs text-gray-400 mb-3">Adresser du skickar från själv — dessa visas aldrig som okända avsändare.</p>
-        <div id="own-email-aliases-list" class="space-y-1 mb-2"></div>
-        <div class="flex gap-2">
-          <input id="own-email-alias-input" type="email" placeholder="annan@adress.se"
-            class="flex-1 border border-gray-200 rounded-full px-3 py-1.5 text-sm"
-            onkeydown="if(event.key==='Enter') addOwnEmailAlias()">
-          <button onclick="addOwnEmailAlias()" class="text-xs border border-gray-300 px-3 py-1.5 rounded-full hover:bg-gray-50">+ Lägg till</button>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-4">
-        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 flex items-center justify-between">
-          <div>
-            <div class="text-sm font-semibold text-gray-700">Återskapa kontaktförslag</div>
-            <div class="text-xs text-gray-400">Analyserar importerade mejl<br>på nytt med AI</div>
-          </div>
-          <button onclick="rebuildSenders(this)" class="text-xs bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-full font-medium">
-            Kör analys
-          </button>
-        </div>
-
-        <div class="bg-white rounded-3xl border">
-          <details>
-            <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none list-none">
-              <div>
-                <span class="text-sm font-semibold text-gray-700">Importhistorik</span>
-                <span id="import-history-latest" class="block text-xs text-gray-400"></span>
+          <div class="space-y-sm">
+            <div>
+              <label class="f-label">Språk</label>
+              <div id="attr-languages-tags" class="flex-wrap" style="margin-bottom:6px;"></div>
+              <div style="display:flex;gap:6px;">
+                <input id="attr-lang-input" type="text" placeholder="Lägg till språk…" class="f-input" style="flex:1;"
+                  onkeydown="if(event.key==='Enter'){addAttrTag('languages','attr-lang-input');event.preventDefault()}">
+                <button onclick="addAttrTag('languages','attr-lang-input')" class="btn btn-ghost btn-sm">+</button>
               </div>
-              <span class="text-gray-400 text-xs">▾</span>
-            </summary>
-            <div class="px-4 pb-4" id="import-history-list">
-              <p class="text-xs text-gray-400">Inga filer importerade ännu.</p>
+            </div>
+            <div>
+              <label class="f-label">Dialekter</label>
+              <div id="attr-dialects-tags" class="flex-wrap" style="margin-bottom:6px;"></div>
+              <div style="display:flex;gap:6px;">
+                <input id="attr-dialect-input" type="text" placeholder="Lägg till dialekt…" class="f-input" style="flex:1;"
+                  onkeydown="if(event.key==='Enter'){addAttrTag('dialects','attr-dialect-input');event.preventDefault()}">
+                <button onclick="addAttrTag('dialects','attr-dialect-input')" class="btn btn-ghost btn-sm">+</button>
+              </div>
+            </div>
+            <div>
+              <label class="f-label">Rörelseskicklighet</label>
+              <div id="attr-movement-tags" class="flex-wrap" style="margin-bottom:6px;"></div>
+              <div style="display:flex;gap:6px;">
+                <input id="attr-movement-input" type="text" placeholder="T.ex. kontaktimprovisation, klassisk balett…" class="f-input" style="flex:1;"
+                  onkeydown="if(event.key==='Enter'){addAttrTag('movement_skills','attr-movement-input');event.preventDefault()}">
+                <button onclick="addAttrTag('movement_skills','attr-movement-input')" class="btn btn-ghost btn-sm">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Konstnärligt statement -->
+        <div class="card-ink" style="border-top:2px solid var(--plum);">
+          <div class="section-heading">Konstnärligt statement</div>
+          <p class="t-small" style="color:var(--soft);margin-bottom:10px;">Beskriv din konstnärliga riktning, drivkraft och vision. AI använder detta som grund i ansökningar.</p>
+          <textarea id="jonna-artistic-statement" rows="6" placeholder="Vad driver dig konstnärligt?…" class="f-input" style="resize:vertical;line-height:1.6;"></textarea>
+          <button onclick="saveArtisticStatement()" class="btn btn-primary btn-sm" style="margin-top:8px;">Spara</button>
+        </div>
+
+        <div class="card-ink">
+          <div class="section-heading">CV</div>
+          <p class="t-small" style="color:var(--soft);margin-bottom:10px;">Klistra in ditt CV som fritext. AI extraherar utbildningar, produktioner och organisationer.</p>
+          <textarea id="jonna-cv-raw" rows="12" placeholder="Klistra in ditt CV här…" class="f-input" style="font-family:var(--font-mono);font-size:11px;resize:vertical;"></textarea>
+          <button onclick="parseJonnaCV()" id="parse-cv-btn" class="btn btn-secondary" style="margin-top:8px;">Analysera CV med AI ✦</button>
+          <div id="jonna-cv-parsed" class="hidden" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--rule);"></div>
+        </div>
+
+        <div class="card-ink">
+          <div class="section-heading">Kompetenser</div>
+          <p class="t-small" style="color:var(--soft);margin-bottom:10px;">AI-hittade och manuellt tillagda kompetenser.</p>
+          <div id="skills-container" class="flex-wrap" style="margin-bottom:12px;"></div>
+          <div style="display:flex;gap:6px;">
+            <input id="skill-input" type="text" placeholder="Lägg till kompetens…" class="f-input" style="flex:1;"
+              onkeydown="if(event.key==='Enter') addManualSkill()">
+            <button onclick="addManualSkill()" class="btn btn-ghost btn-sm">+ Lägg till</button>
+          </div>
+        </div>
+
+        <!-- Produktioner -->
+        <div class="card-ink">
+          <div class="section-heading">Produktioner</div>
+          <p class="t-small" style="color:var(--soft);margin-bottom:10px;">Samlade från CV, AI-sökning och manuellt tillagda.</p>
+          <div id="productions-list" class="space-y-sm" style="margin-bottom:12px;"></div>
+          <details>
+            <summary class="t-small" style="color:var(--rust);cursor:pointer;">+ Lägg till produktion</summary>
+            <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <input id="prod-title" type="text" placeholder="Titel *" class="f-input" style="grid-column:span 2;">
+              <input id="prod-theater" type="text" placeholder="Teater / Bolag" class="f-input">
+              <input id="prod-year" type="text" placeholder="År" class="f-input">
+              <input id="prod-role" type="text" placeholder="Roll" class="f-input" style="grid-column:span 2;">
+              <button onclick="addManualProduction()" class="btn btn-primary" style="grid-column:span 2;">Lägg till</button>
+            </div>
+          </details>
+        </div>
+
+        <!-- Utbildning -->
+        <div class="card-ink">
+          <div class="section-heading">Utbildning</div>
+          <p class="t-small" style="color:var(--soft);margin-bottom:10px;">Samlade från CV, AI-sökning och manuellt tillagda.</p>
+          <div id="education-list" class="space-y-sm" style="margin-bottom:12px;"></div>
+          <details>
+            <summary class="t-small" style="color:var(--rust);cursor:pointer;">+ Lägg till utbildning</summary>
+            <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <input id="edu-school" type="text" placeholder="Skola / Utbildning *" class="f-input" style="grid-column:span 2;">
+              <input id="edu-years" type="text" placeholder="År (t.ex. 2001–2004)" class="f-input" style="grid-column:span 2;">
+              <button onclick="addManualEducation()" class="btn btn-primary" style="grid-column:span 2;">Lägg till</button>
+            </div>
+          </details>
+        </div>
+
+        <div class="card-ink">
+          <div class="section-heading">Sök om mig på webben</div>
+          <p class="t-small" style="color:var(--soft);margin-bottom:16px;">AI söker på ditt namn med olika söktermer och extraherar produktioner, utbildning och bilder.</p>
+          <div class="f-group"><label class="f-label">Ditt fullständiga namn</label><input id="jonna-search-name" type="text" placeholder="Jonna Ljunggren" class="f-input"></div>
+          <div style="margin-bottom:16px;">
+            <label class="f-label" style="margin-bottom:8px;">Söktermer — välj de som stämmer, lägg till egna</label>
+            <div id="search-tags-container" class="flex-wrap" style="margin-bottom:8px;"></div>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+              <input id="custom-tag-input" type="text" placeholder="Lägg till eget sökord…" class="f-input" style="flex:1;"
+                onkeydown="if(event.key==='Enter') addCustomSearchTag()">
+              <button onclick="addCustomSearchTag()" class="btn btn-ghost btn-sm">+ Lägg till</button>
+            </div>
+          </div>
+          <button onclick="runSelfSearch()" id="run-search-btn" class="btn btn-secondary" style="width:100%;margin-bottom:16px;">Sök på webben ✦</button>
+          <div id="self-search-results"></div>
+        </div>
+
+        <!-- Djupdykning -->
+        <div class="card-ink" style="border-top:2px solid var(--marine);">
+          <div class="section-heading">Djupdykning om Jonna</div>
+          <p class="t-small" style="color:var(--soft);margin-bottom:16px;">AI söker brett efter intervjuer, artiklar, omnämnanden och profiler.</p>
+          <button onclick="runJonnaDeepSearch()" id="deep-search-btn" class="btn btn-secondary" style="width:100%;margin-bottom:16px;">Kör djupdykning</button>
+          <div id="deep-search-results"></div>
+        </div>
+      </div>
+
+      <!-- Tab: Brev & Skrivstil -->
+      <div id="jonna-tab-letters" class="hidden space-y">
+        <div class="card-ink">
+          <div class="section-heading">Personliga brev & texter</div>
+          <p class="t-small" style="color:var(--soft);margin-bottom:16px;">Lägg till brev och texter du skrivit. AI analyserar din röst och stil.</p>
+          <div id="jonna-letters-list" class="space-y" style="margin-bottom:16px;"></div>
+          <details>
+            <summary class="t-small" style="color:var(--rust);cursor:pointer;">+ Lägg till brev eller text</summary>
+            <div style="margin-top:12px;">
+              <textarea id="new-letter-text" rows="7" placeholder="Klistra in ett brev, sökbrev, mail eller annan text du skrivit…" class="f-input" style="resize:vertical;margin-bottom:8px;"></textarea>
+              <button onclick="addJonnaLetter()" class="btn btn-primary">Lägg till</button>
+            </div>
+          </details>
+        </div>
+
+        <div class="card-ink">
+          <div class="flex-between" style="margin-bottom:12px;">
+            <div>
+              <div class="section-heading" style="margin-bottom:2px;border-bottom:none;padding-bottom:0;">Skrivstilsanalys</div>
+              <div class="t-micro" style="color:var(--soft);">Genereras från dina brev och används automatiskt i AI-uppföljningar</div>
+            </div>
+            <button onclick="analyzeWritingStyle()" id="analyze-style-btn" class="btn btn-ghost btn-sm">Analysera ✦</button>
+          </div>
+          <div id="jonna-writing-style" class="t-small" style="color:var(--soft);font-style:italic;">
+            Ingen analys ännu. Lägg till brev och klicka Analysera.
+          </div>
+        </div>
+
+        <div class="card-ink">
+          <div class="section-heading">Ansökningsexempel (AI-mall)</div>
+          <p class="t-small" style="color:var(--soft);margin-bottom:16px;">Ansökningar sparade härifrån används av AI för att lära sig din stil och ton.</p>
+          <div id="application-samples-list" class="space-y" style="margin-bottom:16px;">
+            <p class="t-small" style="color:var(--soft);font-style:italic;">Inga ansökningsexempel ännu.</p>
+          </div>
+          <details>
+            <summary class="t-small" style="color:var(--rust);cursor:pointer;">+ Lägg till manuellt</summary>
+            <div style="margin-top:12px;">
+              <input id="sample-title" type="text" placeholder="Titel, t.ex. Personligt brev — Riksteatern 2024" class="f-input" style="margin-bottom:8px;">
+              <textarea id="sample-text" rows="6" placeholder="Klistra in en tidigare ansökan…" class="f-input" style="resize:vertical;margin-bottom:8px;"></textarea>
+              <button onclick="addApplicationSample()" class="btn btn-primary">Lägg till</button>
             </div>
           </details>
         </div>
       </div>
 
-      <div id="unknown-senders-section" class="hidden bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <div class="flex items-start justify-between gap-3 mb-1">
-          <h3 class="text-sm font-semibold text-gray-700">Okända avsändare</h3>
-          <div class="flex gap-2 shrink-0">
-            <button onclick="exportSendersCSV()" class="text-xs px-2.5 py-1.5 border border-gray-200 text-gray-600 rounded-full hover:bg-gray-50 transition">⬇ Exportera CSV</button>
-            <label class="text-xs px-2.5 py-1.5 border border-violet-200 text-violet-600 rounded-full hover:bg-violet-50 transition cursor-pointer">
-              ⬆ Importera CSV
-              <input type="file" accept=".csv" class="hidden" onchange="importSendersCSV(this)">
-            </label>
+      <!-- Tab: Skolnätverk -->
+      <div id="jonna-tab-network" class="hidden">
+        <div class="card-ink">
+          <div class="flex-between" style="margin-bottom:12px;">
+            <div>
+              <div class="section-heading" style="margin-bottom:2px;border-bottom:none;padding-bottom:0;">Skolnätverkskopplingar</div>
+              <div class="t-micro" style="color:var(--soft);">Kontakter som gått på samma utbildningar som du</div>
+            </div>
+            <button onclick="loadSchoolNetwork()" class="btn btn-ghost btn-sm">Uppdatera</button>
+          </div>
+          <div id="jonna-school-network">
+            <p class="t-small" style="color:var(--soft);">Analysera ditt CV (fliken Profil & CV) för att se nätverkskopplingar via skolor.</p>
           </div>
         </div>
-        <p class="text-xs text-gray-400 mb-3">Dessa mejlade dig men finns inte som kontakter ännu — lägg till dem du vill ha i CRM:et.</p>
-        <div id="unknown-senders-list" class="space-y-2"></div>
-        <div id="rejected-senders-section" class="hidden mt-4 pt-4 border-t">
-          <h4 class="text-xs font-semibold text-gray-500 mb-2">Senast avvisade</h4>
-          <div id="rejected-senders-list" class="space-y-1"></div>
+      </div>
+
+      <!-- Tab: E-post -->
+      <div id="jonna-tab-email" class="hidden space-y">
+        <div class="card-ink">
+          <div class="section-heading">Importera .mbox-filer</div>
+          <div style="display:flex;gap:16px;">
+            <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;">
+              <p class="t-small" style="color:var(--soft);margin-bottom:16px;">Exportera Inkorg och Skickat från Mac Mail-appen.<br>(Fil → Exportera brevlåda) och ladda upp filerna här.</p>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <label class="f-label" style="flex-shrink:0;">Senaste</label>
+                <select id="mbox-years" class="filter-select">
+                  <option value="1">1 år</option>
+                  <option value="2">2 år</option>
+                  <option value="3">3 år</option>
+                  <option value="5">5 år</option>
+                  <option value="10" selected>10 år</option>
+                  <option value="15">15 år</option>
+                  <option value="20">20 år</option>
+                  <option value="0">Alla år</option>
+                </select>
+              </div>
+            </div>
+            <div style="width:50%;border:1px dashed var(--rule);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:20px;cursor:pointer;" onclick="document.getElementById('mbox-input').click()">
+              <div style="font-size:24px;">✉</div>
+              <div class="t-small" style="font-weight:600;">Välj .mbox-filer</div>
+              <div class="t-micro" style="color:var(--soft);text-align:center;">Öppna Inkorg.mbox → välj "mbox"</div>
+              <input id="mbox-input" type="file" accept="*" multiple class="hidden" onchange="importMboxFiles(this.files)">
+            </div>
+          </div>
+          <div id="mbox-import-result" class="hidden" style="margin-top:12px;padding:10px 14px;background:var(--butter);border:1px solid var(--mustard);font-size:13px;color:var(--ink);"></div>
+        </div>
+
+        <div class="card-ink">
+          <div class="section-heading">Jonnas egna e-postadresser</div>
+          <p class="t-small" style="color:var(--soft);margin-bottom:12px;">Adresser du skickar från själv — dessa visas aldrig som okända avsändare.</p>
+          <div id="own-email-aliases-list" class="space-y-sm" style="margin-bottom:10px;"></div>
+          <div style="display:flex;gap:6px;">
+            <input id="own-email-alias-input" type="email" placeholder="annan@adress.se" class="f-input" style="flex:1;"
+              onkeydown="if(event.key==='Enter') addOwnEmailAlias()">
+            <button onclick="addOwnEmailAlias()" class="btn btn-ghost btn-sm">+ Lägg till</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card-ink" style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--ink);">Återskapa kontaktförslag</div>
+              <div class="t-small" style="color:var(--soft);">Analyserar importerade mejl på nytt med AI</div>
+            </div>
+            <button onclick="rebuildSenders(this)" class="btn btn-ghost btn-sm">Kör analys</button>
+          </div>
+
+          <div class="card-ink">
+            <details>
+              <summary style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;-webkit-user-select:none;user-select:none;">
+                <div>
+                  <span style="font-size:13px;font-weight:600;color:var(--ink);">Importhistorik</span>
+                  <span id="import-history-latest" class="t-micro" style="display:block;color:var(--soft);margin-top:2px;"></span>
+                </div>
+                <span class="t-small" style="color:var(--soft);">▾</span>
+              </summary>
+              <div style="padding-top:12px;" id="import-history-list">
+                <p class="t-small" style="color:var(--soft);">Inga filer importerade ännu.</p>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div id="unknown-senders-section" class="hidden card-ink">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;">
+            <div class="section-heading" style="margin-bottom:0;border-bottom:none;padding-bottom:0;">Okända avsändare</div>
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              <button onclick="exportSendersCSV()" class="btn btn-ghost btn-sm">↓ Exportera CSV</button>
+              <label class="btn btn-ghost btn-sm" style="cursor:pointer;">
+                ↑ Importera CSV
+                <input type="file" accept=".csv" class="hidden" onchange="importSendersCSV(this)">
+              </label>
+            </div>
+          </div>
+          <p class="t-small" style="color:var(--soft);margin-bottom:12px;">Dessa mejlade dig men finns inte som kontakter ännu.</p>
+          <div id="unknown-senders-list" class="space-y-sm"></div>
+          <div id="rejected-senders-section" class="hidden" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--rule);">
+            <div class="t-micro" style="color:var(--soft);margin-bottom:8px;">Senast avvisade</div>
+            <div id="rejected-senders-list" class="space-y-sm"></div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Tab: Infobank -->
-    <div id="jonna-tab-infobank" class="hidden space-y-4">
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-        <div class="flex items-center justify-between mb-1">
-          <h3 class="text-sm font-semibold text-gray-700">Informationsbank</h3>
-          <button onclick="loadInfobank()" id="infobank-refresh-btn"
-            class="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-full font-medium">
-            Uppdatera
-          </button>
+      <!-- Tab: Infobank -->
+      <div id="jonna-tab-infobank" class="hidden space-y">
+        <div class="card-ink" style="border-top:2px solid var(--marine);">
+          <div class="flex-between" style="margin-bottom:8px;">
+            <div class="section-heading" style="margin-bottom:0;border-bottom:none;padding-bottom:0;">Informationsbank</div>
+            <button onclick="loadInfobank()" id="infobank-refresh-btn" class="btn btn-ghost btn-sm">Uppdatera</button>
+          </div>
+          <p class="t-small" style="color:var(--soft);margin-bottom:16px;">Allt vi vet om Jonna samlat på ett ställe — används som kontext av AI.</p>
+          <div id="infobank-stats" class="hidden" style="grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;"></div>
+          <div style="margin-bottom:12px;">
+            <button onclick="copyInfobank()" id="infobank-copy-btn" class="hidden btn btn-ghost btn-sm">Kopiera text</button>
+          </div>
+          <div id="infobank-content" class="t-small" style="color:var(--soft);font-style:italic;">Tryck "Uppdatera" för att generera infobanken.</div>
         </div>
-        <p class="text-xs text-gray-400 mb-4">Allt vi vet om Jonna samlat på ett ställe — används som kontext av AI vid ansökningar och presentationer.</p>
-        <div id="infobank-stats" class="hidden grid grid-cols-4 gap-3 mb-4"></div>
-        <div class="flex gap-2 mb-3">
-          <button onclick="copyInfobank()" id="infobank-copy-btn"
-            class="hidden text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full font-medium">
-            Kopiera text
-          </button>
-        </div>
-        <div id="infobank-content" class="text-xs text-gray-400 italic">Tryck "Uppdatera" för att generera infobanken.</div>
       </div>
-    </div>
 
-    <!-- Databas-backup -->
-    <div class="mt-4 bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-      <h3 class="text-sm font-semibold text-gray-700 mb-1">Databas</h3>
-      <p class="text-xs text-gray-400 mb-3">Ladda ner en kopia av databasen (crm.db) för lokal backup.</p>
-      <a href="/download-db" download="crm.db"
-        class="inline-block bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-full text-sm font-medium transition-colors">
-        ⬇ Ladda ner crm.db
-      </a>
-    </div>
+      <!-- Databas-backup -->
+      <div class="card-ink" style="margin-top:24px;">
+        <div class="section-heading">Databas</div>
+        <p class="t-small" style="color:var(--soft);margin-bottom:12px;">Ladda ner en kopia av databasen (crm.db) för lokal backup.</p>
+        <a href="/download-db" download="crm.db" class="btn btn-ghost btn-sm">↓ Ladda ner crm.db</a>
+      </div>
 
+    </div>
   </div>
 
-  <!-- NETWORK VIEW -->
-  <div id="view-network" class="hidden p-6 max-w-7xl mx-auto">
-    <div class="flex justify-between items-center mb-4">
-      <div>
-        <h2 class="text-xl font-bold text-gray-900">Kontaktnät</h2>
-        <p class="text-xs text-gray-400 mt-0.5">Jonna i mitten — trådar visar gemensamma produktioner, skolor, projekt och organisationer</p>
-      </div>
-      <div class="flex gap-2 items-center">
-        <div class="flex gap-3 text-xs">
-          <span class="flex items-center gap-1"><span class="w-3 h-1 rounded bg-rose-400 inline-block"></span>Gemensam produktion</span>
-          <span class="flex items-center gap-1"><span class="w-3 h-1 rounded bg-blue-400 inline-block"></span>Gemensam skola</span>
-          <span class="flex items-center gap-1"><span class="w-3 h-1 rounded bg-green-400 inline-block"></span>Gemensamt projekt</span>
-          <span class="flex items-center gap-1"><span class="w-3 h-1 rounded bg-amber-400 inline-block"></span>Samma organisation</span>
-          <span class="flex items-center gap-1"><span class="w-3 h-1 rounded bg-purple-400 inline-block"></span>Kollega</span>
+  <!-- ═══════════════════════════════════════════════════════════
+       NETWORK VIEW
+  ═══════════════════════════════════════════════════════════ -->
+  <div id="view-network" class="hidden">
+    <div class="masthead">
+      <div class="flex-between">
+        <div>
+          <div class="masthead-label">Visualisering</div>
+          <div class="masthead-title">Kontaktnät</div>
+          <div class="masthead-meta">Jonna i mitten — trådar visar gemensamma produktioner, skolor, projekt och organisationer</div>
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;">
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <span class="t-micro" style="display:flex;align-items:center;gap:6px;"><span style="width:20px;height:2px;background:#f87171;display:inline-block;"></span>Gemensam produktion</span>
+            <span class="t-micro" style="display:flex;align-items:center;gap:6px;"><span style="width:20px;height:2px;background:#60a5fa;display:inline-block;"></span>Gemensam skola</span>
+            <span class="t-micro" style="display:flex;align-items:center;gap:6px;"><span style="width:20px;height:2px;background:#4ade80;display:inline-block;"></span>Gemensamt projekt</span>
+            <span class="t-micro" style="display:flex;align-items:center;gap:6px;"><span style="width:20px;height:2px;background:#fbbf24;display:inline-block;"></span>Samma organisation</span>
+            <span class="t-micro" style="display:flex;align-items:center;gap:6px;"><span style="width:20px;height:2px;background:#c084fc;display:inline-block;"></span>Kollega</span>
+          </div>
         </div>
       </div>
     </div>
-    <div id="network-container" class="bg-white rounded-3xl border overflow-hidden" style="height: 75vh;">
-      <svg id="network-svg" width="100%" height="100%"></svg>
+
+    <div style="padding:24px 48px;">
+      <div id="network-container">
+        <svg id="network-svg" width="100%" height="100%"></svg>
+      </div>
     </div>
   </div>
 
-  <!-- APPLICATIONS VIEW -->
-  <div id="view-applications" class="hidden p-6 max-w-4xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-      <h2 class="text-xl font-semibold text-gray-900">Ansökningar</h2>
-      <button onclick="openApplicationPanel({})" class="bg-[#e8b84b] hover:bg-[#e8b84b] text-white px-4 py-2 rounded-full text-sm font-medium transition-colors">+ Ny ansökan</button>
-    </div>
-    <!-- Stats -->
-    <div class="flex gap-3 mb-6">
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm px-4 py-3 text-sm">
-        <span class="font-semibold text-gray-900" id="stat-draft-count">0</span>
-        <span class="text-gray-500 ml-1">utkast</span>
-      </div>
-      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm px-4 py-3 text-sm">
-        <span class="font-semibold text-gray-900" id="stat-sent-count">0</span>
-        <span class="text-gray-500 ml-1">skickade i år</span>
+  <!-- ═══════════════════════════════════════════════════════════
+       APPLICATIONS VIEW
+  ═══════════════════════════════════════════════════════════ -->
+  <div id="view-applications" class="hidden">
+    <div class="masthead">
+      <div class="flex-between">
+        <div>
+          <div class="masthead-label">Karriär</div>
+          <div class="masthead-title">Ansökningar</div>
+        </div>
+        <button onclick="openApplicationPanel({})" class="btn btn-accent">+ Ny ansökan</button>
       </div>
     </div>
-    <!-- Tabs -->
-    <div class="flex gap-0 mb-5 border-b border-gray-200">
-      <button class="app-tab-btn px-4 py-2 text-sm font-medium border-b-2 border-[#e8b84b] text-[#b8882b] -mb-px" data-tab="draft" onclick="switchApplicationTab('draft')">Utkast</button>
-      <button class="app-tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 -mb-px transition-colors" data-tab="sent" onclick="switchApplicationTab('sent')">Skickade</button>
-      <button class="app-tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 -mb-px transition-colors" data-tab="archived" onclick="switchApplicationTab('archived')">Arkiv</button>
-    </div>
-    <div id="applications-list" class="space-y-3">
-      <div class="text-center py-12 text-gray-400 text-sm">Inga ansökningar ännu</div>
+
+    <div class="view-body">
+      <!-- Stats -->
+      <div style="display:flex;gap:12px;margin-bottom:24px;">
+        <div class="card" style="padding:12px 20px;">
+          <span style="font-family:var(--font-serif);font-size:28px;color:var(--ink);" id="stat-draft-count">0</span>
+          <span class="t-small" style="color:var(--soft);margin-left:6px;">utkast</span>
+        </div>
+        <div class="card" style="padding:12px 20px;">
+          <span style="font-family:var(--font-serif);font-size:28px;color:var(--ink);" id="stat-sent-count">0</span>
+          <span class="t-small" style="color:var(--soft);margin-left:6px;">skickade i år</span>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tab-row">
+        <button class="tab-btn tab-active app-tab-btn" data-tab="draft" onclick="switchApplicationTab('draft')">Utkast</button>
+        <button class="tab-btn app-tab-btn" data-tab="sent" onclick="switchApplicationTab('sent')">Skickade</button>
+        <button class="tab-btn app-tab-btn" data-tab="archived" onclick="switchApplicationTab('archived')">Arkiv</button>
+      </div>
+
+      <div id="applications-list" class="space-y">
+        <div style="text-align:center;padding:48px;color:var(--soft);" class="t-small">Inga ansökningar ännu</div>
+      </div>
     </div>
   </div>
 
 </main>
 
-<!-- APPLICATION WRITING PANEL -->
-<div id="application-panel" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeApplicationPanel()"></div>
-  <div class="absolute right-0 top-0 h-full w-[640px] bg-white shadow-2xl flex flex-col">
-    <!-- Panel header (dark) -->
-    <div class="bg-gray-800 px-6 py-4 flex items-center justify-between flex-shrink-0">
+<!-- ═══════════════════════════════════════════════════════════
+     APPLICATION WRITING PANEL
+═══════════════════════════════════════════════════════════ -->
+<div id="application-panel" style="position:fixed;inset:0;z-index:50;" class="hidden">
+  <div style="position:absolute;inset:0;background:rgba(42,31,10,0.35);" onclick="closeApplicationPanel()"></div>
+  <div style="position:absolute;right:0;top:0;height:100%;width:640px;background:var(--paper);display:flex;flex-direction:column;border-left:1px solid var(--rule);">
+    <!-- Panel header -->
+    <div style="background:var(--ink);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
       <div>
-        <h2 class="text-white font-semibold text-base" id="apanel-title">Skriv ansökan</h2>
-        <p class="text-gray-400 text-xs mt-0.5" id="apanel-org"></p>
+        <div style="color:var(--paper);font-family:var(--font-sans);font-size:14px;font-weight:600;" id="apanel-title">Skriv ansökan</div>
+        <div style="color:var(--hair);font-family:var(--font-mono);font-size:10px;margin-top:2px;" id="apanel-org"></div>
       </div>
-      <div class="flex items-center gap-3">
-        <div class="flex gap-1.5">
-          <div class="step-dot w-2 h-2 rounded-full bg-[#e8b84b]" data-step="1"></div>
-          <div class="step-dot w-2 h-2 rounded-full bg-gray-600" data-step="2"></div>
-          <div class="step-dot w-2 h-2 rounded-full bg-gray-600" data-step="3"></div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="display:flex;gap:6px;">
+          <div class="step-dot" data-step="1" style="background:var(--mustard);"></div>
+          <div class="step-dot" data-step="2" style="background:rgba(255,255,255,0.2);"></div>
+          <div class="step-dot" data-step="3" style="background:rgba(255,255,255,0.2);"></div>
         </div>
-        <button onclick="closeApplicationPanel()" class="text-gray-400 hover:text-white ml-2 text-lg leading-none">✕</button>
+        <button onclick="closeApplicationPanel()" style="color:var(--hair);background:none;border:none;cursor:pointer;font-size:18px;line-height:1;">✕</button>
       </div>
     </div>
 
-    <!-- Step 1: Analysis -->
-    <div id="apanel-step-1" class="flex-1 overflow-y-auto p-6">
-      <h3 class="font-semibold text-gray-900 mb-1">Analyserar utlysningen</h3>
-      <p class="text-sm text-gray-500 mb-5 leading-relaxed">AI läser annonsen och extraherar vad som behövs.</p>
-      <div id="apanel-analyzing" class="flex items-center gap-3 py-8 text-gray-400">
-        <div class="w-5 h-5 border-2 border-rose-300 border-t-rose-500 rounded-full animate-spin flex-shrink-0"></div>
-        <span class="text-sm">Analyserar annonsen...</span>
+    <!-- Step 1 -->
+    <div id="apanel-step-1" style="flex:1;overflow-y:auto;padding:24px;">
+      <div style="font-family:var(--font-serif);font-size:20px;color:var(--ink);margin-bottom:4px;">Analyserar utlysningen</div>
+      <p class="t-small" style="color:var(--soft);margin-bottom:20px;">AI läser annonsen och extraherar vad som behövs.</p>
+      <div id="apanel-analyzing" style="display:flex;align-items:center;gap:12px;padding:32px 0;color:var(--soft);">
+        <div style="width:16px;height:16px;border:2px solid var(--hair);border-top-color:var(--rust);border-radius:50%;" class="animate-spin"></div>
+        <span class="t-small">Analyserar annonsen...</span>
       </div>
       <div id="apanel-analysis-result" class="hidden">
-        <div class="space-y-4 mb-6">
+        <div class="space-y" style="margin-bottom:24px;">
           <div id="apanel-requirements-section" class="hidden">
-            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Krav &amp; önskemål</h4>
-            <ul id="apanel-requirements" class="space-y-1 text-sm text-gray-700 leading-relaxed"></ul>
+            <div class="t-meta" style="color:var(--soft);margin-bottom:8px;">Krav &amp; önskemål</div>
+            <ul id="apanel-requirements" class="space-y-sm t-small" style="color:var(--ink);list-style:disc;padding-left:16px;"></ul>
           </div>
           <div id="apanel-submit-section" class="hidden">
-            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Ska skickas in</h4>
-            <div id="apanel-submit-list" class="flex flex-wrap gap-2"></div>
+            <div class="t-meta" style="color:var(--soft);margin-bottom:8px;">Ska skickas in</div>
+            <div id="apanel-submit-list" class="flex-wrap"></div>
           </div>
           <div id="apanel-themes-section" class="hidden">
-            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Nyckelord</h4>
-            <div id="apanel-themes-list" class="flex flex-wrap gap-2"></div>
+            <div class="t-meta" style="color:var(--soft);margin-bottom:8px;">Nyckelord</div>
+            <div id="apanel-themes-list" class="flex-wrap"></div>
           </div>
           <div id="apanel-deadline-section" class="hidden">
-            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Sista ansökningsdag</h4>
-            <p id="apanel-deadline-text" class="text-sm font-medium text-rose-600"></p>
+            <div class="t-meta" style="color:var(--soft);margin-bottom:8px;">Sista ansökningsdag</div>
+            <p id="apanel-deadline-text" class="t-small" style="font-weight:600;color:var(--rust);"></p>
           </div>
         </div>
-        <div class="mb-6">
-          <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Lägg till kontext (frivilligt)</label>
-          <textarea id="apanel-extra-context" rows="3" placeholder="Något specifikt du vill att AI ska betona..." class="w-full border border-gray-200 rounded-full px-3 py-2 text-sm text-gray-700 resize-none focus:border-rose-400"></textarea>
+        <div style="margin-bottom:24px;">
+          <label class="f-label">Lägg till kontext (frivilligt)</label>
+          <textarea id="apanel-extra-context" rows="3" placeholder="Något specifikt du vill att AI ska betona..." class="f-input" style="resize:none;"></textarea>
         </div>
-        <button onclick="goToApplicationStep2()" class="w-full bg-[#e8b84b] hover:bg-[#e8b84b] text-white py-2.5 rounded-full text-sm font-medium transition-colors">Välj dokumenttyp →</button>
+        <button onclick="goToApplicationStep2()" class="btn btn-primary" style="width:100%;justify-content:center;padding:10px 16px;">Välj dokumenttyp →</button>
       </div>
     </div>
 
-    <!-- Step 2: Choose document type -->
-    <div id="apanel-step-2" class="flex-1 overflow-y-auto p-6 hidden">
-      <h3 class="font-semibold text-gray-900 mb-1">Välj dokumenttyp</h3>
-      <p class="text-sm text-gray-500 mb-5 leading-relaxed">Vad ska du skicka in?</p>
-      <div class="space-y-3 mb-6">
-        <label class="flex items-start gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-rose-300 transition-colors">
-          <input type="radio" name="doc-type" value="personal_letter" class="mt-0.5" checked>
+    <!-- Step 2 -->
+    <div id="apanel-step-2" class="hidden" style="flex:1;overflow-y:auto;padding:24px;">
+      <div style="font-family:var(--font-serif);font-size:20px;color:var(--ink);margin-bottom:4px;">Välj dokumenttyp</div>
+      <p class="t-small" style="color:var(--soft);margin-bottom:20px;">Vad ska du skicka in?</p>
+      <div class="space-y" style="margin-bottom:24px;">
+        <label style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1px solid var(--rule);cursor:pointer;">
+          <input type="radio" name="doc-type" value="personal_letter" style="margin-top:2px;" checked>
           <div>
-            <div class="text-sm font-medium text-gray-900">Personligt brev</div>
-            <div class="text-xs text-gray-500 mt-0.5">Fokus på personlighet, motivation och konstnärlig riktning. 400–600 ord.</div>
+            <div class="t-small" style="font-weight:600;color:var(--ink);">Personligt brev</div>
+            <div class="t-micro" style="color:var(--soft);margin-top:2px;">Fokus på personlighet, motivation och konstnärlig riktning. 400–600 ord.</div>
           </div>
         </label>
-        <label class="flex items-start gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-rose-300 transition-colors">
-          <input type="radio" name="doc-type" value="application">
+        <label style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1px solid var(--rule);cursor:pointer;">
+          <input type="radio" name="doc-type" value="application" style="margin-top:2px;">
           <div>
-            <div class="text-sm font-medium text-gray-900">Ansökan</div>
-            <div class="text-xs text-gray-500 mt-0.5">Komplett ansökan med CV-highlights och motivering. 500–800 ord.</div>
+            <div class="t-small" style="font-weight:600;color:var(--ink);">Ansökan</div>
+            <div class="t-micro" style="color:var(--soft);margin-top:2px;">Komplett ansökan med CV-highlights och motivering. 500–800 ord.</div>
           </div>
         </label>
-        <label class="flex items-start gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-rose-300 transition-colors">
-          <input type="radio" name="doc-type" value="cover_letter">
+        <label style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1px solid var(--rule);cursor:pointer;">
+          <input type="radio" name="doc-type" value="cover_letter" style="margin-top:2px;">
           <div>
-            <div class="text-sm font-medium text-gray-900">Sökbrev</div>
-            <div class="text-xs text-gray-500 mt-0.5">Kort och professionellt. 200–300 ord.</div>
+            <div class="t-small" style="font-weight:600;color:var(--ink);">Sökbrev</div>
+            <div class="t-micro" style="color:var(--soft);margin-top:2px;">Kort och professionellt. 200–300 ord.</div>
           </div>
         </label>
       </div>
-      <div class="mb-6">
-        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Specifika instruktioner (frivilligt)</label>
-        <textarea id="apanel-instructions" rows="3" placeholder="T.ex. betona erfarenhet av ny dramatik, nämn specifik produktion..." class="w-full border border-gray-200 rounded-full px-3 py-2 text-sm text-gray-700 resize-none focus:border-rose-400"></textarea>
+      <div style="margin-bottom:24px;">
+        <label class="f-label">Specifika instruktioner (frivilligt)</label>
+        <textarea id="apanel-instructions" rows="3" placeholder="T.ex. betona erfarenhet av ny dramatik, nämn specifik produktion..." class="f-input" style="resize:none;"></textarea>
       </div>
-      <button onclick="generateApplication()" id="apanel-generate-btn" class="w-full bg-[#e8b84b] hover:bg-[#e8b84b] text-white py-2.5 rounded-full text-sm font-medium transition-colors flex items-center justify-center gap-2">
-        <span>Generera text</span>
+      <button onclick="generateApplication()" id="apanel-generate-btn" class="btn btn-primary" style="width:100%;justify-content:center;padding:10px 16px;">
+        Generera text
       </button>
     </div>
 
-    <!-- Step 3: Edit and save -->
-    <div id="apanel-step-3" class="flex-1 flex flex-col overflow-hidden hidden">
-      <div class="flex-1 overflow-y-auto p-6">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="font-semibold text-gray-900">Redigera &amp; spara</h3>
-          <span id="apanel-word-count" class="text-xs text-gray-400"></span>
+    <!-- Step 3 -->
+    <div id="apanel-step-3" class="hidden" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="flex:1;overflow-y:auto;padding:24px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="font-family:var(--font-serif);font-size:20px;color:var(--ink);">Redigera &amp; spara</div>
+          <span id="apanel-word-count" class="t-micro" style="color:var(--soft);"></span>
         </div>
-        <textarea id="apanel-text" rows="22" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 leading-relaxed resize-none focus:border-rose-400" oninput="updateApWordCount()"></textarea>
+        <textarea id="apanel-text" rows="22" class="f-input" style="resize:none;line-height:1.7;" oninput="updateApWordCount()"></textarea>
       </div>
-      <div class="flex-shrink-0 border-t border-gray-100 p-4 bg-white">
-        <div class="flex gap-2 flex-wrap">
-          <button onclick="goToApplicationStep2()" class="text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-full text-xs font-medium transition-colors">↺ Regenerera</button>
-          <button onclick="saveApplicationDraft()" class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 px-4 py-2 rounded-full text-sm font-medium transition-colors">Spara utkast</button>
-          <button onclick="markApplicationSent()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors">Markera som skickad</button>
-          <button onclick="saveApplicationAsSample()" class="text-violet-600 hover:text-violet-700 hover:bg-violet-50 px-3 py-1.5 rounded-full text-xs font-medium transition-colors">Spara som mall</button>
+      <div style="flex-shrink:0;border-top:1px solid var(--rule);padding:14px 24px;background:var(--paper-alt);">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="goToApplicationStep2()" class="btn btn-ghost btn-sm">↺ Regenerera</button>
+          <button onclick="saveApplicationDraft()" class="btn btn-secondary btn-sm">Spara utkast</button>
+          <button onclick="markApplicationSent()" class="btn btn-primary btn-sm" style="background:var(--forest);border-color:var(--forest);">Markera som skickad</button>
+          <button onclick="saveApplicationAsSample()" class="btn btn-ghost btn-sm" style="color:var(--plum);border-color:var(--plum);">Spara som mall</button>
         </div>
       </div>
     </div>
@@ -977,8 +1448,8 @@
 </div>
 
 <!-- SLIDE-IN PANEL -->
-<div id="panelOverlay" class="fixed inset-0 bg-black/20 z-30 hidden" onclick="closePanel()"></div>
-<div id="slidePanel" class="slide-panel hidden-panel fixed right-0 top-0 h-full w-[480px] bg-white shadow-2xl z-40 overflow-y-auto">
+<div id="panelOverlay" class="hidden" style="position:fixed;inset:0;background:rgba(42,31,10,0.15);z-index:30;" onclick="closePanel()"></div>
+<div id="slidePanel" class="slide-panel hidden-panel" style="position:fixed;right:0;top:0;height:100%;width:480px;z-index:40;overflow-y:auto;">
   <div id="panelContent"></div>
 </div>
 
@@ -1187,15 +1658,11 @@ function showView(name) {
   document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
   const viewEl = document.getElementById('view-' + name);
   if (viewEl) viewEl.classList.remove('hidden');
-  document.querySelectorAll('.nav-btn').forEach(el => {
-    el.classList.remove('bg-[#e8b84b]/20', 'text-[#b8882b]', 'border-l-2', 'border-[#e8b84b]');
-    el.classList.add('text-gray-400', 'hover:text-white', 'hover:bg-gray-800');
-  });
+  // Uppdatera aktiv nav med ny designklass
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('nav-active'));
+  document.getElementById('nav-jonna')?.classList.remove('nav-active');
   const active = document.getElementById('nav-' + name);
-  if (active) {
-    active.classList.add('bg-[#e8b84b]/20', 'text-[#b8882b]', 'border-l-2', 'border-[#e8b84b]');
-    active.classList.remove('text-gray-400', 'hover:text-white', 'hover:bg-gray-800');
-  }
+  if (active) active.classList.add('nav-active');
   closePanel();
   if (name === 'dashboard') loadDashboard();
   else if (name === 'contacts') loadContacts();
@@ -1667,8 +2134,11 @@ function toggleIndustryStarFilter() {
   const btn = document.getElementById('industryStarFilterBtn');
   if (btn) {
     btn.className = industryStarFilter
-      ? 'border rounded-xl px-3 py-1.5 text-sm bg-amber-400 text-white border-amber-400 font-medium'
-      : 'border rounded-xl px-3 py-1.5 text-sm bg-white text-gray-600 border-gray-300 hover:border-amber-400';
+      ? 'btn btn-sm'
+      : 'btn btn-ghost btn-sm';
+    btn.style.background = industryStarFilter ? 'var(--mustard)' : '';
+    btn.style.color = industryStarFilter ? 'var(--ink)' : '';
+    btn.style.borderColor = industryStarFilter ? 'var(--ink)' : '';
   }
   loadContacts();
 }
@@ -3055,16 +3525,10 @@ async function unlinkProject(contactId, projectId) {
 // ── PROJECTS ───────────────────────────────────────────────────
 function setProjectStatus(status) {
   currentProjectStatus = status;
-  document.querySelectorAll('.project-tab').forEach(el => {
-    el.classList.remove('border-[#e8b84b]', 'text-[#b8882b]');
-    el.classList.add('border-transparent', 'text-gray-500');
-  });
+  document.querySelectorAll('.project-tab').forEach(el => el.classList.remove('tab-active'));
   const tabId = status === 'i produktion' ? 'ptab-produktion' : `ptab-${status}`;
   const tab = document.getElementById(tabId);
-  if (tab) {
-    tab.classList.add('border-[#e8b84b]', 'text-[#b8882b]');
-    tab.classList.remove('border-transparent', 'text-gray-500');
-  }
+  if (tab) tab.classList.add('tab-active');
   loadProjects();
 }
 
@@ -4071,15 +4535,9 @@ function setJonnaTab(tab) {
   ['cv', 'letters', 'network', 'email', 'infobank'].forEach(t => {
     document.getElementById(`jonna-tab-${t}`).classList.toggle('hidden', t !== tab);
   });
-  document.querySelectorAll('.jonna-tab').forEach(el => {
-    el.classList.remove('border-[#e8b84b]', 'text-[#b8882b]');
-    el.classList.add('border-transparent', 'text-gray-500');
-  });
+  document.querySelectorAll('.jonna-tab').forEach(el => el.classList.remove('tab-active'));
   const active = document.getElementById(`jtab-${tab}`);
-  if (active) {
-    active.classList.add('border-[#e8b84b]', 'text-[#b8882b]');
-    active.classList.remove('border-transparent', 'text-gray-500');
-  }
+  if (active) active.classList.add('tab-active');
   if (tab === 'network') loadSchoolNetwork();
   if (tab === 'infobank') loadInfobank();
 }
@@ -4476,10 +4934,7 @@ function setDiscoverTab(tab) {
     document.getElementById(`discover-tab-${t}`).classList.toggle('hidden', t !== tab);
     const btn = document.getElementById(`dtab-${t}`);
     if (!btn) return;
-    btn.classList.toggle('border-[#e8b84b]', t === tab);
-    btn.classList.toggle('text-rose-600', t === tab);
-    btn.classList.toggle('border-transparent', t !== tab);
-    btn.classList.toggle('text-gray-500', t !== tab);
+    btn.classList.toggle('tab-active', t === tab);
   });
   if (tab === 'castings') loadCastings();
 }
@@ -6076,11 +6531,7 @@ function renderApplicationsList(applications) {
 
 function switchApplicationTab(tab) {
   document.querySelectorAll('.app-tab-btn').forEach(btn => {
-    const isActive = btn.dataset.tab === tab;
-    btn.classList.toggle('border-[#e8b84b]', isActive);
-    btn.classList.toggle('text-rose-600', isActive);
-    btn.classList.toggle('border-transparent', !isActive);
-    btn.classList.toggle('text-gray-500', !isActive);
+    btn.classList.toggle('tab-active', btn.dataset.tab === tab);
   });
   loadApplications(tab);
 }
@@ -6242,10 +6693,9 @@ async function deleteApplicationFromList(id) {
 function updateApStepDots(activeStep) {
   document.querySelectorAll('.step-dot').forEach(dot => {
     const step = parseInt(dot.dataset.step);
-    dot.classList.remove('bg-[#e8b84b]', 'bg-rose-300', 'bg-gray-600');
-    if (step === activeStep) dot.classList.add('bg-[#e8b84b]');
-    else if (step < activeStep) dot.classList.add('bg-rose-300');
-    else dot.classList.add('bg-gray-600');
+    if (step === activeStep) dot.style.background = 'var(--mustard)';
+    else if (step < activeStep) dot.style.background = 'var(--rust)';
+    else dot.style.background = 'rgba(255,255,255,0.2)';
   });
 }
 
@@ -6305,79 +6755,74 @@ initSearchTags();
 updateProfileCompleteness();
 </script>
 
+
 <!-- Berika grupp modal -->
-<div id="bulk-enrich-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-3xl shadow-xl w-full max-w-sm p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold text-gray-900">Berika grupp med AI</h2>
-      <button onclick="document.getElementById('bulk-enrich-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+<div id="bulk-enrich-modal" class="hidden" style="position:fixed;inset:0;background:rgba(42,31,10,0.4);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--paper);border:1px solid var(--rule);width:100%;max-width:380px;padding:24px;">
+    <div class="flex-between" style="margin-bottom:16px;">
+      <div style="font-family:var(--font-serif);font-size:22px;color:var(--ink);">Berika grupp med AI</div>
+      <button onclick="document.getElementById('bulk-enrich-modal').classList.add('hidden')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--soft);">✕</button>
     </div>
-    <p class="text-sm text-gray-500 mb-4">Välj vilken prioritetsnivå du vill berika. AI söker info på webben för varje kontakt.</p>
-    <div class="flex gap-2 mb-3">
-      <select id="bulk-enrich-priority" class="flex-1 border rounded-xl px-3 py-2 text-sm">
+    <p class="t-small" style="color:var(--soft);margin-bottom:16px;">Välj vilken prioritetsnivå du vill berika. AI söker info på webben för varje kontakt.</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <select id="bulk-enrich-priority" class="filter-select" style="flex:1;">
         <option value="10">Nivå 10 (varmast)</option>
         <option value="9">Nivå 9</option>
         <option value="8">Nivå 8</option>
         <option value="7">Nivå 7</option>
         <option value="6">Nivå 6</option>
       </select>
-      <button id="bulk-enrich-start-btn" onclick="startBulkEnrichByPriority()"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-medium">
-        Starta
-      </button>
+      <button id="bulk-enrich-start-btn" onclick="startBulkEnrichByPriority()" class="btn btn-primary">Starta</button>
     </div>
-    <label class="flex items-center gap-2 text-sm text-gray-600 mb-5 cursor-pointer">
-      <input type="checkbox" id="bulk-enrich-skip-existing" checked class="rounded">
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);margin-bottom:20px;cursor:pointer;">
+      <input type="checkbox" id="bulk-enrich-skip-existing" checked>
       Hoppa över redan berikade
     </label>
     <div id="bulk-enrich-progress" class="hidden">
-      <div class="flex justify-between text-xs text-gray-500 mb-1">
-        <span id="bulk-enrich-status">Förbereder…</span>
-        <span id="bulk-enrich-count"></span>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span id="bulk-enrich-status" class="t-micro" style="color:var(--soft);">Förbereder…</span>
+        <span id="bulk-enrich-count" class="t-micro" style="color:var(--soft);"></span>
       </div>
-      <div class="w-full bg-gray-100 rounded-full h-2">
-        <div id="bulk-enrich-bar" class="h-2 bg-blue-500 rounded-full transition-all" style="width:0%"></div>
+      <div class="progress-track">
+        <div id="bulk-enrich-bar" class="progress-fill" style="width:0%;background:var(--marine);"></div>
       </div>
     </div>
   </div>
 </div>
 
 <!-- AI-ranka branschvikt modal -->
-<div id="ai-rank-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-3xl shadow-xl w-full max-w-md flex flex-col max-h-[85vh]">
-    <div class="flex justify-between items-center p-5 border-b shrink-0">
-      <h2 class="text-lg font-bold text-gray-900">● AI-ranka branschvikt</h2>
-      <button onclick="document.getElementById('ai-rank-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+<div id="ai-rank-modal" class="hidden" style="position:fixed;inset:0;background:rgba(42,31,10,0.4);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--paper);border:1px solid var(--rule);width:100%;max-width:460px;max-height:85vh;display:flex;flex-direction:column;">
+    <div class="flex-between" style="padding:20px 24px;border-bottom:1px solid var(--rule);flex-shrink:0;">
+      <div style="font-family:var(--font-serif);font-size:22px;color:var(--ink);">AI-ranka branschvikt</div>
+      <button onclick="document.getElementById('ai-rank-modal').classList.add('hidden')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--soft);">✕</button>
     </div>
-    <div class="p-5 overflow-y-auto flex-1">
-      <p class="text-sm text-gray-500 mb-4">AI analyserar kontakterna och sätter 0–5 prickar baserat på branschvikt och jobbpotential för Jonna. Kontakterna bearbetas 25 i taget, sorterade efter varmast först.</p>
-      <div id="ai-rank-status" class="text-sm font-medium text-gray-700 mb-2 hidden"></div>
-      <div id="ai-rank-progress-wrap" class="hidden mb-4">
-        <div class="w-full bg-gray-100 rounded-full h-2 mb-1">
-          <div id="ai-rank-bar" class="h-2 bg-amber-400 rounded-full transition-all" style="width:0%"></div>
+    <div style="padding:20px 24px;overflow-y:auto;flex:1;">
+      <p class="t-small" style="color:var(--soft);margin-bottom:16px;">AI analyserar kontakterna och sätter 0–5 prickar baserat på branschvikt och jobbpotential för Jonna.</p>
+      <div id="ai-rank-status" class="t-small" style="font-weight:600;color:var(--ink);margin-bottom:8px;display:none;"></div>
+      <div id="ai-rank-progress-wrap" class="hidden" style="margin-bottom:16px;">
+        <div class="progress-track" style="margin-bottom:4px;">
+          <div id="ai-rank-bar" class="progress-fill" style="width:0%;background:var(--mustard);"></div>
         </div>
-        <div id="ai-rank-progress-label" class="text-xs text-gray-400"></div>
+        <div id="ai-rank-progress-label" class="t-micro" style="color:var(--soft);"></div>
       </div>
-      <div id="ai-rank-results" class="space-y-1.5 text-xs"></div>
+      <div id="ai-rank-results" class="space-y-sm t-small"></div>
     </div>
-    <div class="p-5 border-t shrink-0 flex gap-2">
-      <button id="ai-rank-btn" onclick="runAiRankBatch()"
-        class="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-2 rounded-full text-sm font-medium">
-        Kör nästa omgång
-      </button>
-      <button onclick="resetAiRank()" class="px-3 py-2 border border-gray-200 text-gray-500 rounded-full text-sm hover:bg-gray-50" title="Börja om från kontakt 1">↺ Börja om</button>
+    <div style="padding:16px 24px;border-top:1px solid var(--rule);display:flex;gap:8px;flex-shrink:0;">
+      <button id="ai-rank-btn" onclick="runAiRankBatch()" class="btn btn-primary" style="flex:1;justify-content:center;">Kör nästa omgång</button>
+      <button onclick="resetAiRank()" class="btn btn-ghost btn-sm" title="Börja om från kontakt 1">↺ Börja om</button>
     </div>
   </div>
 </div>
 
 <!-- Dubletter modal -->
-<div id="duplicates-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-3xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
-    <div class="flex justify-between items-center p-5 border-b">
-      <h2 class="text-lg font-bold text-gray-900">Möjliga dubletter</h2>
-      <button onclick="document.getElementById('duplicates-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+<div id="duplicates-modal" class="hidden" style="position:fixed;inset:0;background:rgba(42,31,10,0.4);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--paper);border:1px solid var(--rule);width:100%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;">
+    <div class="flex-between" style="padding:20px 24px;border-bottom:1px solid var(--rule);">
+      <div style="font-family:var(--font-serif);font-size:22px;color:var(--ink);">Möjliga dubletter</div>
+      <button onclick="document.getElementById('duplicates-modal').classList.add('hidden')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--soft);">✕</button>
     </div>
-    <div id="duplicates-content" class="overflow-y-auto p-5"></div>
+    <div id="duplicates-content" style="overflow-y:auto;padding:20px 24px;"></div>
   </div>
 </div>
 </body>
