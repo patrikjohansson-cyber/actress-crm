@@ -310,12 +310,16 @@ Svara ENBART med JSON:
 }
 
 Försök hitta regissör, scen och så många medverkande som möjligt. Om inget hittas, returnera tomma strängar/arrayer. Svara ENBART med JSON.`;
-    const text = await claudeSearch(prompt, 1500, 'claude-haiku-4-5-20251001', false);
+    const text = await claudeSearch(prompt, 1500, 'claude-haiku-4-5-20251001');
     let info = {};
     try {
       const m = text.match(/\{[\s\S]*\}/);
       info = JSON.parse(m ? m[0] : '{}');
     } catch { info = {}; }
+
+    // Läs befintlig ai_data för att kunna slå ihop
+    const existingAiData = (() => { try { return JSON.parse(project.ai_data || '{}'); } catch { return {}; } })();
+    const existingCast = existingAiData.cast || [];
 
     // Separera Jonnas info från övrig cast
     const jonnaName = (db.getJonnaKey('full_name') || '').toLowerCase();
@@ -323,7 +327,7 @@ Försök hitta regissör, scen och så många medverkande som möjligt. Om inget
     const allContacts = db.getContacts();
 
     let jonnaInCast = null;
-    const otherCast = [];
+    const newCast = [];
     for (const person of (info.cast || [])) {
       const lower = person.name.toLowerCase();
       const isJonna = jonnaName && (lower.includes(jonnaName) || jonnaName.includes(lower) ||
@@ -333,19 +337,31 @@ Försök hitta regissör, scen och så många medverkande som möjligt. Om inget
       } else {
         const match = allContacts.find(c => c.name.toLowerCase() === lower ||
           c.name.toLowerCase().includes(lower) || lower.includes(c.name.toLowerCase()));
-        otherCast.push({ ...person, existing_contact: match ? { id: match.id, name: match.name } : null });
+        newCast.push({ ...person, existing_contact: match ? { id: match.id, name: match.name } : null });
       }
     }
 
-    // Spara Jonnas roll + nya fält om hittade
-    const projectUpdate = { ai_data: JSON.stringify({ ...info, cast: otherCast }) };
-    if (jonnaInCast?.role) projectUpdate.jonna_role = jonnaInCast.role;
-    if (info.director) projectUpdate.director = info.director;
-    if (info.venue) projectUpdate.venue = info.venue;
-    if (info.num_performances) projectUpdate.num_performances = info.num_performances;
+    // Slå ihop cast – lägg till nya personer, behåll befintliga
+    const mergedCastMap = new Map(existingCast.map(p => [p.name.toLowerCase(), p]));
+    for (const p of newCast) {
+      if (!mergedCastMap.has(p.name.toLowerCase())) mergedCastMap.set(p.name.toLowerCase(), p);
+    }
+    const mergedCast = [...mergedCastMap.values()];
+
+    // Slå ihop övrig data – fyll bara i tomma fält
+    const mergedInfo = { ...existingAiData, ...Object.fromEntries(
+      Object.entries(info).filter(([k, v]) => v && !existingAiData[k])
+    ), cast: mergedCast };
+
+    // Spara Jonnas roll + nya fält om hittade (skriv inte över befintliga)
+    const projectUpdate = { ai_data: JSON.stringify(mergedInfo) };
+    if (jonnaInCast?.role && !project.jonna_role) projectUpdate.jonna_role = jonnaInCast.role;
+    if (info.director && !project.director) projectUpdate.director = info.director;
+    if (info.venue && !project.venue) projectUpdate.venue = info.venue;
+    if (info.num_performances && !project.num_performances) projectUpdate.num_performances = info.num_performances;
 
     db.updateProject(req.params.id, projectUpdate);
-    res.json({ ...info, cast: otherCast, jonna_in_cast: jonnaInCast });
+    res.json({ ...mergedInfo, jonna_in_cast: jonnaInCast });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
