@@ -914,6 +914,27 @@ function getJonnaContext() {
   return full.slice(0, 1200); // cap för att hålla nere tokens
 }
 
+// ── Kort Jonna-summering för jobbannonssökning ─────────────────
+function getJonnaSearchSummary() {
+  const profile = db.getJonnaProfile();
+  const parts = ['Jonna är skådespelerska/performer inom svensk teater och film.'];
+
+  const bio = profile.bio || profile.self_search_results?.bio || '';
+  if (bio) parts.push(bio.slice(0, 200));
+
+  const aiSkills = profile.self_search_results?.skills || [];
+  const manualSkills = profile.manual_skills || [];
+  const allSkills = [...new Set([...manualSkills, ...aiSkills])].slice(0, 8);
+  if (allSkills.length) parts.push(`Kompetenser: ${allSkills.join(', ')}.`);
+
+  try {
+    const feedback = db.getDiscoverFeedback();
+    if (feedback.liked.length) parts.push(`Har visat intresse för: ${feedback.liked.slice(0, 5).map(l => l.title).join(', ')}.`);
+  } catch {}
+
+  return parts.join(' ');
+}
+
 // ── Jonna full context (för ansökningsskrivning — ingen cap) ──────
 function getJonnaFullContext() {
   const profile = db.getJonnaProfile();
@@ -1894,7 +1915,6 @@ app.get('/api/discover/jobs', (req, res) => {
 
 app.post('/api/discover/jobs/search', async (req, res) => {
   const jonnaProfile = db.getJonnaProfile();
-  const jonnaContext = `Jonna är skådespelerska/performer inom teater och film.\n${getJonnaContext()}`;
   const extraSites = jonnaProfile.discover_sites_jobs || [];
 
   try {
@@ -1904,7 +1924,7 @@ app.post('/api/discover/jobs/search', async (req, res) => {
     const alreadyKnown = existingTitles.length ? `\nDessa har redan hittats — hitta ANDRA: ${existingTitles.slice(0, 8).join(', ')}` : '';
     const prompt = `Sök efter aktuella jobbannonser och castingkall för skådespelare, performers och scenkonst i Sverige. Sök på platser som teateralliansen.se, sceneochfilm.se, kulturjobb.se, enskilda teatrars hemsidor (dramaten, stadsteatern, riksteatern, folkteatern, etc.).${extraSites.length ? '\n\nSök SPECIFIKT även på dessa sidor som användaren lagt till: ' + extraSites.join(', ') : ''}${alreadyKnown}
 
-Jonna profil: ${jonnaContext}
+Om sökanden: ${getJonnaSearchSummary()}
 
 Hitta 15-20 relevanta annonser/möjligheter. Svara ENBART med JSON-array:
 [{
@@ -2830,6 +2850,7 @@ app.post('/api/discover/castings/search', async (req, res) => {
     languages ? `språk: ${languages}` : '',
     actorAttrs?.voice_type ? `röst: ${actorAttrs.voice_type}` : ''
   ].filter(Boolean).join(', ');
+  const searchSummary = getJonnaSearchSummary() + (profileHint ? ` Fysiska attribut: ${profileHint}.` : '');
 
   try {
     if (req.query.reset === 'true') db.clearCastings();
@@ -2841,7 +2862,7 @@ app.post('/api/discover/castings/search', async (req, res) => {
 - Produktioner i pre-production som är på väg att casta (annonserade men ej klara)
 - Öppna castingkall på kulturjobb.se, sceneochfilm.se
 
-${profileHint ? `Jonna är skådespelerska med ${profileHint}.` : 'Jonna är skådespelerska.'}
+Om sökanden: ${searchSummary}
 
 Hitta 10-15 castingkall/auditions. Svara ENBART med JSON-array:
 [{
