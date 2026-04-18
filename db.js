@@ -999,6 +999,10 @@ module.exports = {
     db.prepare('UPDATE job_listings SET opportunity_subtype = ? WHERE id = ?').run(subtype, id);
   },
 
+  clearCastings() {
+    db.prepare(`DELETE FROM job_listings WHERE opportunity_subtype IN ('casting', 'audition', 'open_call') AND saved = 0`).run();
+  },
+
   // ── AI helper ──────────────────────────────────────────────
   getContactWithInteractions(id) {
     const contact = db.prepare('SELECT * FROM contacts WHERE id = ?').get(id);

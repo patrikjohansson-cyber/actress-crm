@@ -2832,6 +2832,7 @@ app.post('/api/discover/castings/search', async (req, res) => {
   ].filter(Boolean).join(', ');
 
   try {
+    if (req.query.reset === 'true') db.clearCastings();
     const prompt = `Sök efter aktuella castingkall och auditions för skådespelare i Sverige. Sök specifikt på:
 - Svenska teatrars hemsidor (dramaten.se, stadsteatern.se, riksteatern.se, göteborgsoperan.se, malmöopera.se, norlandsoperan.se m.fl.)
 - Svenska filmbolags castingkall (SF Studios, Filmpool Nord, Film i Väst, Götafilm)
@@ -2854,13 +2855,14 @@ Hitta 10-15 castingkall/auditions. Svara ENBART med JSON-array:
   "subtype": "casting/audition/open_call"
 }]`;
 
-    const text = await claudeSearch(prompt, 3000);
+    const text = await claudeSearch(prompt, 5000);
     let listings = [];
     try {
       const jsonMatch = text.match(/\[[\s\S]*\]/);
       listings = JSON.parse(jsonMatch ? jsonMatch[0] : '[]');
     } catch { listings = []; }
 
+    if (listings.length > 0) db.clearCastings();
     const saved = [];
     for (const l of listings) {
       const result = db.insertJobListing({
