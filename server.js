@@ -1643,9 +1643,10 @@ app.post('/api/contacts/:id/fetch-photo', async (req, res) => {
     if (!imgResp.ok) return null;
     const contentType = imgResp.headers.get('content-type') || '';
     if (!contentType.startsWith('image/')) return null;
-    const ext = contentType.includes('png') ? 'png' : 'jpg';
-    const filename = `${req.params.id}-ai-${Date.now()}.${ext}`;
+    const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
     const buffer = Buffer.from(await imgResp.arrayBuffer());
+    if (buffer.length < 8000) return null; // för liten = logga/ikon
+    const filename = `${req.params.id}-ai-${Date.now()}.${ext}`;
     fs.writeFileSync(path.join(uploadsDir, filename), buffer);
     return `/uploads/${filename}`;
   };
@@ -1658,7 +1659,14 @@ app.post('/api/contacts/:id/fetch-photo', async (req, res) => {
     const firstName = contact.name.split(' ')[0].toLowerCase();
 
     const toAbs = (src, base) => { try { return src.startsWith('http') ? src : new URL(src, base).href; } catch { return null; } };
-    const isPhotoUrl = (src) => src && !src.match(/logo|icon|banner|sprite|pixel|1x1|placeholder/i);
+    const isPhotoUrl = (src) => {
+      if (!src) return false;
+      // Blockera kända loggor, ikoner och sociala mediers statiska tillgångar
+      if (src.match(/logo|icon|banner|sprite|pixel|1x1|placeholder|favicon|badge|button|share|follow|social/i)) return false;
+      if (src.match(/instagram\.com\/static|cdninstagram\.com\/static|facebook\.com\/rsrc|linkedin\.com\/favicon|twimg\.com\/profile_images\/\d+\/.*normal/i)) return false;
+      if (src.match(/\/static\/(images|assets)\/(logo|icon|badge)/i)) return false;
+      return true;
+    };
 
     const scrapeForPhoto = async (pageUrl) => {
       try {
@@ -1722,11 +1730,12 @@ app.post('/api/contacts/:id/fetch-photo', async (req, res) => {
     // Steg 2: Fallback — web search med Claude
     if (!photoResult) {
       const desc = [contact.name, contact.role, contact.organization].filter(Boolean).join(', ');
-      const prompt = `Hitta EN profilbild-URL (JPG/PNG) för personen: ${desc}.
-Sök på teaterns hemsida, LinkedIn, IMDB, SVT, Dramaten eller svenska kulturinstitutioner.
+      const prompt = `Hitta EN porträttbild (ansikte/överkropp) på personen: ${desc}.
+Sök på teaterns hemsida, IMDB, SVT, Dramaten, Riksteatern eller liknande.
+Bilden ska föreställa PERSONEN — inte en logotyp, ikon, Instagram-logo, LinkedIn-logo eller annat grafiskt element.
 Svara ENBART med en JSON-rad: {"url":"https://...","source":"var du hittade den"}
-Hittar du ingen bild, svara: {"url":null,"source":""}
-Returnera bara EN bild — den bäst matchande. Sluta söka när du hittat en.`;
+Hittar du ingen porträttbild på personen, svara: {"url":null,"source":""}
+Returnera bara EN URL. Sluta söka när du hittat en riktig porträttbild.`;
       const text = await claudeSearch(prompt, 500, 'claude-sonnet-4-6', true);
       const m = text.match(/\{[^}]+\}/);
       if (m) {
