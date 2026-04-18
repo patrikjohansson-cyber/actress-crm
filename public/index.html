@@ -1396,6 +1396,10 @@
         <span class="t-small">Analyserar annonsen...</span>
       </div>
       <div id="apanel-analysis-result" class="hidden">
+        <div id="apanel-role-desc-section" class="hidden" style="background:var(--butter);border:1px solid var(--mustard);padding:12px 14px;margin-bottom:16px;">
+          <div class="t-meta" style="color:var(--soft);margin-bottom:4px;">De söker</div>
+          <p id="apanel-role-desc" class="t-small" style="color:var(--ink);line-height:1.6;"></p>
+        </div>
         <div class="space-y" style="margin-bottom:24px;">
           <div id="apanel-requirements-section" class="hidden">
             <div class="t-meta" style="color:var(--soft);margin-bottom:8px;">Krav &amp; önskemål</div>
@@ -1428,21 +1432,21 @@
       <p class="t-small" style="color:var(--soft);margin-bottom:20px;">Vad ska du skicka in?</p>
       <div class="space-y" style="margin-bottom:24px;">
         <label style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1px solid var(--rule);cursor:pointer;">
-          <input type="radio" name="doc-type" value="personal_letter" style="margin-top:2px;" checked>
+          <input type="checkbox" name="doc-type" value="personal_letter" style="margin-top:2px;width:15px;height:15px;accent-color:var(--ink);" checked>
           <div>
             <div class="t-small" style="font-weight:600;color:var(--ink);">Personligt brev</div>
             <div class="t-micro" style="color:var(--soft);margin-top:2px;">Fokus på personlighet, motivation och konstnärlig riktning. 400–600 ord.</div>
           </div>
         </label>
         <label style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1px solid var(--rule);cursor:pointer;">
-          <input type="radio" name="doc-type" value="application" style="margin-top:2px;">
+          <input type="checkbox" name="doc-type" value="application" style="margin-top:2px;width:15px;height:15px;accent-color:var(--ink);">
           <div>
             <div class="t-small" style="font-weight:600;color:var(--ink);">Ansökan</div>
             <div class="t-micro" style="color:var(--soft);margin-top:2px;">Komplett ansökan med CV-highlights och motivering. 500–800 ord.</div>
           </div>
         </label>
         <label style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1px solid var(--rule);cursor:pointer;">
-          <input type="radio" name="doc-type" value="cover_letter" style="margin-top:2px;">
+          <input type="checkbox" name="doc-type" value="cover_letter" style="margin-top:2px;width:15px;height:15px;accent-color:var(--ink);">
           <div>
             <div class="t-small" style="font-weight:600;color:var(--ink);">Sökbrev</div>
             <div class="t-micro" style="color:var(--soft);margin-top:2px;">Kort och professionellt. 200–300 ord.</div>
@@ -1460,6 +1464,7 @@
 
     <!-- Step 3 -->
     <div id="apanel-step-3" class="hidden" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <div id="apanel-doc-tabs" class="hidden" style="display:flex;gap:0;border-bottom:1px solid var(--rule);padding:0 24px;flex-shrink:0;"></div>
       <div style="flex:1;overflow-y:auto;padding:24px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
           <div style="font-family:var(--font-serif);font-size:20px;color:var(--ink);">Redigera &amp; spara</div>
@@ -6675,6 +6680,7 @@ async function openExistingApplication(applicationId) {
 async function analyzeOpportunityForPanel(opportunityData) {
   document.getElementById('apanel-analyzing').classList.remove('hidden');
   document.getElementById('apanel-analysis-result').classList.add('hidden');
+  document.getElementById('apanel-role-desc-section').classList.add('hidden');
   document.getElementById('apanel-requirements-section').classList.add('hidden');
   document.getElementById('apanel-submit-section').classList.add('hidden');
   document.getElementById('apanel-themes-section').classList.add('hidden');
@@ -6692,6 +6698,10 @@ async function analyzeOpportunityForPanel(opportunityData) {
     document.getElementById('apanel-analyzing').classList.add('hidden');
     document.getElementById('apanel-analysis-result').classList.remove('hidden');
     const analysis = data.analysis || {};
+    if (analysis.role_description) {
+      document.getElementById('apanel-role-desc-section').classList.remove('hidden');
+      document.getElementById('apanel-role-desc').textContent = analysis.role_description;
+    }
     if (analysis.requirements?.length) {
       document.getElementById('apanel-requirements-section').classList.remove('hidden');
       document.getElementById('apanel-requirements').innerHTML = analysis.requirements.map(r => `<li class="flex items-start gap-2"><span class="text-rose-400 mt-0.5 flex-shrink-0">•</span><span>${escHtml(r)}</span></li>`).join('');
@@ -6729,29 +6739,67 @@ function goToApplicationStep2() {
   updateApStepDots(2);
 }
 
+const DOC_LABELS = { personal_letter: 'Personligt brev', application: 'Ansökan', cover_letter: 'Sökbrev' };
+
 async function generateApplication() {
   const btn = document.getElementById('apanel-generate-btn');
-  const docType = document.querySelector('input[name="doc-type"]:checked')?.value || 'personal_letter';
+  const checked = [...document.querySelectorAll('input[name="doc-type"]:checked')].map(i => i.value);
+  if (!checked.length) { toast('Välj minst en dokumenttyp', 'error'); return; }
   const instructions = document.getElementById('apanel-instructions').value;
-  btn.innerHTML = '<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div><span>Skriver ansökan...</span>';
+
   btn.disabled = true;
-  try {
-    const data = await api('POST', '/api/applications/generate', {
-      applicationId: currentApplicationId,
-      documentType: docType,
-      extraInstructions: instructions
-    });
-    document.getElementById('apanel-step-2').classList.add('hidden');
-    document.getElementById('apanel-step-3').classList.remove('hidden');
-    document.getElementById('apanel-text').value = data.text || '';
-    updateApWordCount();
-    updateApStepDots(3);
-  } catch(e) {
-    toast('Fel vid generering: ' + e.message, 'error');
-  } finally {
-    btn.innerHTML = '<span>Generera text</span>';
-    btn.disabled = false;
+  window._generatedDocs = {};
+
+  for (let i = 0; i < checked.length; i++) {
+    const docType = checked[i];
+    btn.innerHTML = `<div style="width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin 0.7s linear infinite;margin-right:8px;"></div>Skriver ${DOC_LABELS[docType]} (${i+1}/${checked.length})…`;
+    try {
+      const data = await api('POST', '/api/applications/generate', {
+        applicationId: currentApplicationId,
+        documentType: docType,
+        extraInstructions: instructions
+      });
+      window._generatedDocs[docType] = data.text || '';
+    } catch(e) {
+      toast(`Fel vid ${DOC_LABELS[docType]}: ` + e.message, 'error');
+    }
   }
+
+  btn.innerHTML = '<span>Generera text</span>';
+  btn.disabled = false;
+
+  if (!Object.keys(window._generatedDocs).length) return;
+
+  // Bygg flikar om mer än ett dokument
+  const tabsEl = document.getElementById('apanel-doc-tabs');
+  const types = Object.keys(window._generatedDocs);
+  if (types.length > 1) {
+    tabsEl.classList.remove('hidden');
+    tabsEl.style.display = 'flex';
+    tabsEl.innerHTML = types.map((t, i) => `
+      <button id="apanel-tab-${t}" onclick="switchApTab('${t}')"
+        style="padding:10px 14px;font-family:var(--font-mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;border:none;cursor:pointer;border-bottom:2px solid ${i===0?'var(--ink)':'transparent'};background:transparent;color:${i===0?'var(--ink)':'var(--soft)'};">
+        ${DOC_LABELS[t]}
+      </button>`).join('');
+  } else {
+    tabsEl.classList.add('hidden');
+  }
+
+  document.getElementById('apanel-text').value = window._generatedDocs[types[0]] || '';
+  document.getElementById('apanel-step-2').classList.add('hidden');
+  document.getElementById('apanel-step-3').classList.remove('hidden');
+  updateApWordCount();
+  updateApStepDots(3);
+}
+
+function switchApTab(docType) {
+  document.getElementById('apanel-text').value = window._generatedDocs[docType] || '';
+  updateApWordCount();
+  document.querySelectorAll('#apanel-doc-tabs button').forEach(btn => {
+    const active = btn.id === `apanel-tab-${docType}`;
+    btn.style.borderBottomColor = active ? 'var(--ink)' : 'transparent';
+    btn.style.color = active ? 'var(--ink)' : 'var(--soft)';
+  });
 }
 
 function updateApWordCount() {
