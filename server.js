@@ -348,10 +348,11 @@ Försök hitta regissör, scen och så många medverkande som möjligt. Om inget
     }
     const mergedCast = [...mergedCastMap.values()];
 
-    // Slå ihop övrig data – fyll bara i tomma fält
+    // Slå ihop övrig data – fyll bara i tomma fält, slå ihop arrayer
+    const mergedSources = [...new Set([...(existingAiData.sources || []), ...(info.sources || [])])];
     const mergedInfo = { ...existingAiData, ...Object.fromEntries(
-      Object.entries(info).filter(([k, v]) => v && !existingAiData[k])
-    ), cast: mergedCast };
+      Object.entries(info).filter(([k, v]) => v && !existingAiData[k] && k !== 'sources' && k !== 'cast')
+    ), cast: mergedCast, sources: mergedSources };
 
     // Spara Jonnas roll + nya fält om hittade (skriv inte över befintliga)
     const projectUpdate = { ai_data: JSON.stringify(mergedInfo) };
