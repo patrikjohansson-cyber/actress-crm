@@ -8,6 +8,7 @@ const readline = require('readline');
 const Anthropic = require('@anthropic-ai/sdk');
 const { ImapFlow } = require('imapflow');
 const { simpleParser } = require('mailparser');
+const cheerio = require('cheerio');
 const db = require('./db');
 
 // Ensure uploads dir exists
@@ -72,7 +73,7 @@ Svara ENBART med JSON:
 }`;
 
   try {
-    const text = await claudeSearch(prompt, 800, 'claude-haiku-4-5-20251001');
+    const text = await claudeSearch(prompt, 800, 'claude-haiku-4-5-20251001', false);
     let result;
     try {
       const m = text.match(/\{[\s\S]*\}/);
@@ -309,7 +310,7 @@ Svara ENBART med JSON:
 }
 
 Försök hitta regissör, scen och så många medverkande som möjligt. Om inget hittas, returnera tomma strängar/arrayer. Svara ENBART med JSON.`;
-    const text = await claudeSearch(prompt, 1500, 'claude-haiku-4-5-20251001');
+    const text = await claudeSearch(prompt, 1500, 'claude-haiku-4-5-20251001', false);
     let info = {};
     try {
       const m = text.match(/\{[\s\S]*\}/);
@@ -387,7 +388,7 @@ Svara ENBART med JSON:
 }
 
 Om inget hittas, returnera tomma arrayer. Svara ENBART med JSON.`;
-    const text = await claudeSearch(prompt, 2000, 'claude-haiku-4-5-20251001');
+    const text = await claudeSearch(prompt, 2000, 'claude-haiku-4-5-20251001', false);
     let pressData = {};
     try {
       const m = text.match(/\{[\s\S]*\}/);
@@ -427,7 +428,7 @@ Svara ENBART med JSON:
 }
 
 Svara ENBART med JSON.`;
-    const text = await claudeSearch(prompt, 2500, 'claude-haiku-4-5-20251001');
+    const text = await claudeSearch(prompt, 2500, 'claude-haiku-4-5-20251001', false);
     let data = {};
     try {
       const m = text.match(/\{[\s\S]*\}/);
@@ -1013,30 +1014,21 @@ function getJonnaFullContext() {
 }
 
 // ── Helper: Claude with web search (server-side tool) ──────────
-async function claudeSearch(prompt, maxTokens = 2000, model = 'claude-sonnet-4-6') {
+async function claudeSearch(prompt, maxTokens = 2000, model = 'claude-sonnet-4-6', useWebSearch = true) {
   const messages = [{ role: 'user', content: prompt }];
+  const tools = useWebSearch ? [{ type: 'web_search_20250305', name: 'web_search' }] : undefined;
   let retried = false;
   for (let i = 0; i < 3; i++) {
     let resp;
     try {
-      resp = await anthropic.messages.create({
-        model,
-        max_tokens: maxTokens,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages
-      });
+      resp = await anthropic.messages.create({ model, max_tokens: maxTokens, ...(tools && { tools }), messages });
     } catch (err) {
       if (!retried && (err.status === 429 || err.status === 529)) {
         retried = true;
         const wait = err.status === 529 ? 30000 : 60000;
         console.log(`[claudeSearch] ${err.status === 529 ? 'Overloaded' : 'Rate limit'} — väntar ${wait / 1000}s...`);
         await new Promise(r => setTimeout(r, wait));
-        resp = await anthropic.messages.create({
-          model,
-          max_tokens: maxTokens,
-          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-          messages
-        });
+        resp = await anthropic.messages.create({ model, max_tokens: maxTokens, ...(tools && { tools }), messages });
       } else throw err;
     }
     messages.push({ role: 'assistant', content: resp.content });
@@ -1247,7 +1239,7 @@ Gör sökningar och svara sedan ENBART med JSON (inga andra kommentarer):
 
 Om personen inte hittas via sökning, använd informationen från hemsidan ovan. Svara ENBART med JSON.`;
 
-    const text = await claudeSearch(prompt, 1500, 'claude-haiku-4-5-20251001');
+    const text = await claudeSearch(prompt, 1500, 'claude-haiku-4-5-20251001', false);
     let enriched;
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -1596,7 +1588,7 @@ Svara ENBART med en JSON-rad: {"url":"https://...","source":"var du hittade den"
 Om du inte hittar någon bild, svara: {"url":null,"source":""}`;
 
   try {
-    const text = await claudeSearch(prompt, 500, 'claude-haiku-4-5-20251001');
+    const text = await claudeSearch(prompt, 500, 'claude-haiku-4-5-20251001', false);
     const m = text.match(/\{[^}]+\}/);
     if (!m) return res.json({ url: null });
     const { url, source } = JSON.parse(m[0]);
@@ -1813,7 +1805,7 @@ Gör flera sökningar och svara sedan ENBART med JSON:
 
 Svara ENBART med JSON.`;
 
-    const text = await claudeSearch(prompt, 2000, 'claude-haiku-4-5-20251001');
+    const text = await claudeSearch(prompt, 2000, 'claude-haiku-4-5-20251001', false);
     let extracted;
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -1910,6 +1902,37 @@ app.get('/api/discover/jobs', (req, res) => {
   res.json(jobs);
 });
 
+// ── Scraper: hämta jobblistningar från gratissajter ────────────
+const SCRAPE_SITES = [
+  { url: 'https://www.kulturjobb.se/', name: 'kulturjobb.se' },
+  { url: 'https://www.teateralliansen.se/lediga-jobb', name: 'teateralliansen.se' },
+  { url: 'https://www.sceneochfilm.se/jobb', name: 'sceneochfilm.se' },
+];
+
+async function scrapeSite({ url, name }) {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ActressCRM/1.0)' },
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const $ = cheerio.load(html);
+    $('script, style, nav, footer, header, form, .cookie-banner, .ads').remove();
+    const text = $('main, article, .jobs, .listings, #content, body')
+      .first().text().replace(/\s+/g, ' ').trim().slice(0, 4000);
+    return text ? `=== ${name} ===\n${text}` : null;
+  } catch (e) {
+    console.warn(`[scraper] ${name}: ${e.message}`);
+    return null;
+  }
+}
+
+async function scrapeJobSites() {
+  const results = await Promise.all(SCRAPE_SITES.map(scrapeSite));
+  return results.filter(Boolean).join('\n\n');
+}
+
 app.post('/api/discover/jobs/search', async (req, res) => {
   const jonnaProfile = db.getJonnaProfile();
   const extraSites = jonnaProfile.discover_sites_jobs || [];
@@ -1918,12 +1941,16 @@ app.post('/api/discover/jobs/search', async (req, res) => {
     const existingTitles = db.getJobTitles();
     const contacts = db.getContacts();
 
+    const [scrapedContent] = await Promise.all([scrapeJobSites()]);
     const alreadyKnown = existingTitles.length ? `\nDessa har redan hittats — hitta ANDRA: ${existingTitles.slice(0, 8).join(', ')}` : '';
-    const prompt = `Sök efter aktuella jobbannonser och castingkall för skådespelare, performers och scenkonst i Sverige. Sök på platser som teateralliansen.se, sceneochfilm.se, kulturjobb.se, enskilda teatrars hemsidor (dramaten, stadsteatern, riksteatern, folkteatern, etc.).${extraSites.length ? '\n\nSök SPECIFIKT även på dessa sidor som användaren lagt till: ' + extraSites.join(', ') : ''}${alreadyKnown}
+    const scrapedSection = scrapedContent ? `\n\nHär är scrapad data från jobbannonssajter — använd detta som primär källa:\n${scrapedContent}` : '';
+    const extraSection = extraSites.length ? `\n\nSök SPECIFIKT även på dessa sidor: ${extraSites.join(', ')}` : '';
+
+    const prompt = `Du ska hitta aktuella jobbannonser för skådespelare och scenkonst i Sverige.${scrapedSection}${extraSection}${alreadyKnown}
 
 Om sökanden: ${getJonnaSearchSummary()}
 
-Hitta 15-20 relevanta annonser/möjligheter. Svara ENBART med JSON-array:
+Extrahera annonser ur den scrapade texten ovan och komplettera med websökning om det behövs. Hitta 15-20 relevanta annonser/möjligheter. Svara ENBART med JSON-array:
 [{
   "title": "Rollnamn eller tjänstetitel",
   "organization": "Teater/produktionsbolag",
@@ -2851,17 +2878,16 @@ app.post('/api/discover/castings/search', async (req, res) => {
 
   try {
     if (req.query.reset === 'true') db.clearCastings();
-    const prompt = `Sök efter aktuella castingkall och auditions för skådespelare i Sverige. Sök specifikt på:
-- Svenska teatrars hemsidor (dramaten.se, stadsteatern.se, riksteatern.se, göteborgsoperan.se, malmöopera.se, norlandsoperan.se m.fl.)
-- Svenska filmbolags castingkall (SF Studios, Filmpool Nord, Film i Väst, Götafilm)
-- Svenska Filminstitutets produktionskalender
-- Fria teatergrupper som söker medverkande
-- Produktioner i pre-production som är på väg att casta (annonserade men ej klara)
-- Öppna castingkall på kulturjobb.se, sceneochfilm.se
+    const scrapedContent = await scrapeJobSites();
+    const scrapedSection = scrapedContent ? `\n\nHär är scrapad data från jobbannonssajter — använd detta som primär källa:\n${scrapedContent}` : '';
+
+    const prompt = `Du ska hitta aktuella castingkall och auditions för skådespelare i Sverige.${scrapedSection}
+
+Komplettera även med websökning mot: dramaten.se, stadsteatern.se, riksteatern.se, göteborgsoperan.se, SF Studios, Filmpool Nord, Film i Väst, fria teatergrupper.
 
 Om sökanden: ${searchSummary}
 
-Hitta 10-15 castingkall/auditions. Svara ENBART med JSON-array:
+Extrahera casting calls ur den scrapade texten och komplettera med websökning. Hitta 10-15 castingkall/auditions. Svara ENBART med JSON-array:
 [{
   "title": "Rollnamn eller produktionstitel",
   "organization": "Teater/produktionsbolag",
