@@ -2304,7 +2304,7 @@ function renderContacts(contacts, orgs = [], contactJobs = {}, contactStipends =
       </div>
       ${badges.length ? `<div class="flex gap-1 flex-wrap mb-1">${badges.join('')}</div>` : ''}
       ${tags.length ? `<div class="flex gap-1 flex-wrap mb-1">${tags.slice(0,2).map(t => `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">${escHtml(t)}</span>`).join('')}</div>` : ''}
-      ${enrichment?.bio ? `<div style="font-size:11px;color:#6b5d48;line-height:1.4;margin-bottom:4px;">${escHtml(enrichment.bio.slice(0, 80))}${enrichment.bio.length > 80 ? '…' : ''}</div>` : ''}
+      ${enrichment?.bio ? (() => { const maxChars = [160, 120, 80, 50, 0][Math.min(badges.length, 4)]; return maxChars > 0 ? `<div style="font-size:11px;color:#6b5d48;line-height:1.4;margin-bottom:4px;">${escHtml(enrichment.bio.slice(0, maxChars))}${enrichment.bio.length > maxChars ? '…' : ''}</div>` : ''; })() : ''}
       <div class="mt-auto pt-2">
         <div class="w-full bg-gray-100 rounded-full h-1.5">
           <div class="h-1.5 rounded-full transition-all" style="width:${(c.priority || 5) * 10}%; background: hsl(${220 - (c.priority || 5) * 22}, 85%, 50%)"></div>
