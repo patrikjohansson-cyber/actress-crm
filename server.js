@@ -919,9 +919,6 @@ function getJonnaSearchSummary() {
   const profile = db.getJonnaProfile();
   const parts = ['Jonna är skådespelerska/performer inom svensk teater och film.'];
 
-  const bio = profile.bio || profile.self_search_results?.bio || '';
-  if (bio) parts.push(bio.slice(0, 200));
-
   const aiSkills = profile.self_search_results?.skills || [];
   const manualSkills = profile.manual_skills || [];
   const allSkills = [...new Set([...manualSkills, ...aiSkills])].slice(0, 8);
