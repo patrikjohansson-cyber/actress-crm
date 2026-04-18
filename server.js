@@ -1911,6 +1911,13 @@ const SCRAPE_SITES = [
   { url: 'https://sv.stagepool.com/skadespelare/102300/skadespelare_sokes_till_oppen_casting', name: 'stagepool.com' },
 ];
 
+const SCRAPE_STIPEND_SITES = [
+  { url: 'https://www.konstnärsnämnden.se/stipendier-och-bidrag/', name: 'Konstnärsnämnden' },
+  { url: 'https://www.kulturradet.se/bidrag/', name: 'Kulturrådet' },
+  { url: 'https://www.filminstitutet.se/finansiering/', name: 'Svenska Filminstitutet' },
+  { url: 'https://stim.se/stod-och-stipendier/', name: 'STIM' },
+];
+
 async function scrapeSite({ url, name }) {
   try {
     const res = await fetch(url, {
@@ -1932,6 +1939,11 @@ async function scrapeSite({ url, name }) {
 
 async function scrapeJobSites() {
   const results = await Promise.all(SCRAPE_SITES.map(scrapeSite));
+  return results.filter(Boolean).join('\n\n');
+}
+
+async function scrapeStipendSites() {
+  const results = await Promise.all(SCRAPE_STIPEND_SITES.map(scrapeSite));
   return results.filter(Boolean).join('\n\n');
 }
 
@@ -2064,10 +2076,16 @@ app.post('/api/discover/stipends/search', async (req, res) => {
     ));
     const contacts = db.getContacts();
 
+    const scrapedContent = await scrapeStipendSites();
+    const scrapedSection = scrapedContent ? `\n\nHär är scrapad data från stipendiesajter — använd detta som primär källa:\n${scrapedContent}` : '';
+    const extraSection = extraSites.length ? `\n\nSök SPECIFIKT även på dessa sidor: ${extraSites.join(', ')}` : '';
     const alreadyKnown = existingNames.length ? `\nDessa finns redan i biblioteket — hitta ANDRA personer: ${existingNames.join(', ')}` : '';
-    const prompt = `Sök efter personer som nyligen fått stipendier eller bidrag från svenska kulturinstitutioner och stiftelser inom teater och scenkonstsektorn. Sök hos: Konstnärsnämnden, Kulturrådet, Stiftelsen Längmanska kulturfonden, Helge Ax:son Johnsons stiftelse, Svenska Filminstitutet, STIM, regionala kulturnämnder, enskilda teaters stipendiefonder.${extraSites.length ? '\n\nSök SPECIFIKT även på dessa sidor: ' + extraSites.join(', ') : ''}${alreadyKnown}
 
-Hitta 20-25 stipendiater. Svara ENBART med JSON-array:
+    const prompt = `Du ska hitta personer som nyligen fått stipendier eller bidrag från svenska kulturinstitutioner inom teater och scenkonst.${scrapedSection}${extraSection}${alreadyKnown}
+
+Komplettera med websökning mot: Stiftelsen Längmanska kulturfonden, Helge Ax:son Johnsons stiftelse, regionala kulturnämnder, enskilda teaters stipendiefonder.
+
+Extrahera stipendiater ur den scrapade texten och komplettera med websökning. Hitta 20-25 stipendiater. Svara ENBART med JSON-array:
 [{
   "person_name": "Förnamn Efternamn",
   "organization": "Konstnärsnämnden",
