@@ -72,7 +72,7 @@ Svara ENBART med JSON:
 }`;
 
   try {
-    const text = await claudeSearch(prompt, 800);
+    const text = await claudeSearch(prompt, 800, 'claude-haiku-4-5-20251001');
     let result;
     try {
       const m = text.match(/\{[\s\S]*\}/);
@@ -309,7 +309,7 @@ Svara ENBART med JSON:
 }
 
 Försök hitta regissör, scen och så många medverkande som möjligt. Om inget hittas, returnera tomma strängar/arrayer. Svara ENBART med JSON.`;
-    const text = await claudeSearch(prompt, 1500);
+    const text = await claudeSearch(prompt, 1500, 'claude-haiku-4-5-20251001');
     let info = {};
     try {
       const m = text.match(/\{[\s\S]*\}/);
@@ -387,7 +387,7 @@ Svara ENBART med JSON:
 }
 
 Om inget hittas, returnera tomma arrayer. Svara ENBART med JSON.`;
-    const text = await claudeSearch(prompt, 2000);
+    const text = await claudeSearch(prompt, 2000, 'claude-haiku-4-5-20251001');
     let pressData = {};
     try {
       const m = text.match(/\{[\s\S]*\}/);
@@ -427,7 +427,7 @@ Svara ENBART med JSON:
 }
 
 Svara ENBART med JSON.`;
-    const text = await claudeSearch(prompt, 2500);
+    const text = await claudeSearch(prompt, 2500, 'claude-haiku-4-5-20251001');
     let data = {};
     try {
       const m = text.match(/\{[\s\S]*\}/);
@@ -995,14 +995,14 @@ function getJonnaFullContext() {
 }
 
 // ── Helper: Claude with web search (server-side tool) ──────────
-async function claudeSearch(prompt, maxTokens = 2000) {
+async function claudeSearch(prompt, maxTokens = 2000, model = 'claude-sonnet-4-6') {
   const messages = [{ role: 'user', content: prompt }];
   let retried = false;
   for (let i = 0; i < 3; i++) {
     let resp;
     try {
       resp = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
+        model,
         max_tokens: maxTokens,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages
@@ -1014,7 +1014,7 @@ async function claudeSearch(prompt, maxTokens = 2000) {
         console.log(`[claudeSearch] ${err.status === 529 ? 'Overloaded' : 'Rate limit'} — väntar ${wait / 1000}s...`);
         await new Promise(r => setTimeout(r, wait));
         resp = await anthropic.messages.create({
-          model: 'claude-sonnet-4-6',
+          model,
           max_tokens: maxTokens,
           tools: [{ type: 'web_search_20250305', name: 'web_search' }],
           messages
@@ -1229,7 +1229,7 @@ Gör sökningar och svara sedan ENBART med JSON (inga andra kommentarer):
 
 Om personen inte hittas via sökning, använd informationen från hemsidan ovan. Svara ENBART med JSON.`;
 
-    const text = await claudeSearch(prompt, 1500);
+    const text = await claudeSearch(prompt, 1500, 'claude-haiku-4-5-20251001');
     let enriched;
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -1578,7 +1578,7 @@ Svara ENBART med en JSON-rad: {"url":"https://...","source":"var du hittade den"
 Om du inte hittar någon bild, svara: {"url":null,"source":""}`;
 
   try {
-    const text = await claudeSearch(prompt, 500);
+    const text = await claudeSearch(prompt, 500, 'claude-haiku-4-5-20251001');
     const m = text.match(/\{[^}]+\}/);
     if (!m) return res.json({ url: null });
     const { url, source } = JSON.parse(m[0]);
@@ -1795,7 +1795,7 @@ Gör flera sökningar och svara sedan ENBART med JSON:
 
 Svara ENBART med JSON.`;
 
-    const text = await claudeSearch(prompt, 2000);
+    const text = await claudeSearch(prompt, 2000, 'claude-haiku-4-5-20251001');
     let extracted;
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
