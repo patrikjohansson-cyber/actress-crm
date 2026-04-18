@@ -1247,26 +1247,35 @@ app.post('/api/contacts/:id/enrich', async (req, res) => {
   try {
     const jonnaShort = jonnaContext ? jonnaContext.slice(0, 500) : '';
 
-    // Hämta hemsidans innehåll direkt om den finns
-    let websiteContent = '';
-    if (contact.website) {
+    // Hämta och skrapa hemsida + URL:er från anteckningar
+    const scrapeUrl = async (url, label) => {
       try {
-        const r = await fetch(contact.website, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) });
-        if (r.ok) {
-          const html = await r.text();
-          // Plocka ut text — ta bort taggar och komprimera blanksteg
-          websiteContent = html.replace(/<style[\s\S]*?<\/style>/gi, '')
-            .replace(/<script[\s\S]*?<\/script>/gi, '')
-            .replace(/<[^>]+>/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .slice(0, 3000);
-        }
-      } catch { /* timeout eller blockerad — fortsätt utan */ }
-    }
+        const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) });
+        if (!r.ok) return null;
+        const html = await r.text();
+        const text = html.replace(/<style[\s\S]*?<\/style>/gi, '')
+          .replace(/<script[\s\S]*?<\/script>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ').trim().slice(0, 2000);
+        return text ? `=== ${label} ===\n${text}` : null;
+      } catch { return null; }
+    };
+
+    // Hitta URL:er i anteckningar
+    const notesText = contact.notes || '';
+    const urlsInNotes = [...notesText.matchAll(/https?:\/\/[^\s)>\]"]+/g)].map(m => m[0]).slice(0, 3);
+
+    const scrapeResults = await Promise.all([
+      contact.website ? scrapeUrl(contact.website, `Hemsida (${contact.website})`) : null,
+      ...urlsInNotes.map(u => scrapeUrl(u, `Länk från anteckningar (${u})`))
+    ]);
+    const scrapedContent = scrapeResults.filter(Boolean).join('\n\n');
+
+    const notesHint = notesText.replace(/https?:\/\/[^\s)>\]"]+/g, '').trim();
 
     const prompt = `Sök på webben efter information om ${contact.name} inom svensk teater och film. Sök brett på personens NAMN — hela karriären, inte enbart kopplat till en specifik arbetsgivare.${contact.organization ? `\n(Kontext: ${contact.name} är/har varit kopplad till ${contact.organization}, men sök bortom det för att hitta hela karriären.)` : ''}${contact.role ? `\nYrke: ${contact.role}` : ''}${contact.website ? `\nPersonens hemsida: ${contact.website}` : ''}
-${websiteContent ? `\n=== INNEHÅLL FRÅN PERSONENS HEMSIDA (${contact.website}) ===\n${websiteContent}\n=== SLUT PÅ HEMSIDA ===\n` : ''}
+${notesHint ? `\nAnteckningar om personen (använd som ledtrådar):\n${notesHint}\n` : ''}
+${scrapedContent ? `\n${scrapedContent}\n` : ''}
 ${jonnaShort ? `Jonna (aktörens sammanhang):\n${jonnaShort}\n` : ''}
 
 Gör sökningar och svara sedan ENBART med JSON (inga andra kommentarer):
