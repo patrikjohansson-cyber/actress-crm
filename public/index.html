@@ -2276,12 +2276,12 @@ function renderContacts(contacts, orgs = [], contactJobs = {}, contactStipends =
     const stipends = contactStipends[c.id] || [];
     const latestStipend = stipends[stipends.length - 1];
 
-    const b = 'inline-flex items-center gap-0.5 text-[9px] px-1 py-0 rounded-full';
+    const b = 'badge inline-flex items-center gap-0.5';
     const badges = [
-      schoolName ? `<span class="${b} bg-blue-50 text-blue-700 border border-blue-100" title="Studerat med Jonna">🎓 ${escHtml(schoolName)}</span>` : '',
-      ...prodNames.map(n => `<span class="${b} bg-violet-50 text-violet-700 border border-violet-100" title="Spelat med Jonna">🎭 ${escHtml(n.length > 20 ? n.slice(0,19)+'…' : n)}</span>`),
-      linkedJobs.length ? `<span class="${b} bg-emerald-50 text-emerald-700 border border-emerald-100" title="${escHtml(linkedJobs.join(', '))}">🔍 ${escHtml(linkedJobs[0].length > 20 ? linkedJobs[0].slice(0,19)+'…' : linkedJobs[0])}</span>` : '',
-      latestStipend ? `<span class="${b} bg-amber-50 text-amber-700 border border-amber-100" title="${escHtml(latestStipend.org||'')}">🏆 ${escHtml(latestStipend.year || latestStipend.org || 'Stipendiat')}</span>` : '',
+      schoolName ? `<span class="${b} badge-marine" title="Studerat med Jonna">🎓 ${escHtml(schoolName)}</span>` : '',
+      ...prodNames.map(n => `<span class="${b} badge-plum" title="Spelat med Jonna">🎭 ${escHtml(n.length > 20 ? n.slice(0,19)+'…' : n)}</span>`),
+      linkedJobs.length ? `<span class="${b} badge-forest" title="${escHtml(linkedJobs.join(', '))}">🔍 ${escHtml(linkedJobs[0].length > 20 ? linkedJobs[0].slice(0,19)+'…' : linkedJobs[0])}</span>` : '',
+      latestStipend ? `<span class="${b} badge-mustard" title="${escHtml(latestStipend.org||'')}">🏆 ${escHtml(latestStipend.year || latestStipend.org || 'Stipendiat')}</span>` : '',
     ].filter(Boolean);
 
     return `
