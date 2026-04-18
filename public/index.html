@@ -333,10 +333,16 @@
           <div id="sites-stipends" class="discover-sites" data-tab="stipends"></div>
         </div>
         <div class="shrink-0 flex flex-col items-end gap-1">
-          <button onclick="searchStipends()" id="search-stipends-btn"
-            class="bg-[#e8b84b] hover:bg-[#d4a33c] text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-            <span>🔍</span> Sök nu
-          </button>
+          <div class="flex gap-2">
+            <button onclick="searchStipends(false)" id="search-stipends-btn"
+              class="bg-[#e8b84b] hover:bg-[#d4a33c] text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
+              <span>🔍</span> Sök nu
+            </button>
+            <button onclick="searchStipends(true)"
+              class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-2 rounded-full text-sm font-medium" title="Rensa biblioteket och sök på nytt">
+              ↺ Rensa &amp; sök om
+            </button>
+          </div>
           <p id="search-status-stipends" class="text-xs text-gray-400"></p>
         </div>
       </div>
@@ -4878,13 +4884,14 @@ async function searchJobs() {
   btn.disabled = false; btn.innerHTML = '<span>🔍</span> Sök nu';
 }
 
-async function searchStipends() {
+async function searchStipends(reset = false) {
   const btn = document.getElementById('search-stipends-btn');
   btn.disabled = true; btn.innerHTML = '<span class="animate-pulse">Söker…</span>';
   setSearchStatus('stipends', '');
   document.getElementById('stipends-list').innerHTML = '<p class="text-sm text-gray-400 animate-pulse">AI söker efter stipendiater…</p>';
   try {
-    const stipends = await api('POST', '/api/discover/stipends/search');
+    const url = '/api/discover/stipends/search' + (reset ? '?reset=true' : '');
+    const stipends = await api('POST', url);
     renderStipends(stipends);
     toast(`Hittade ${stipends.length} stipendiater`);
     const s = await api('GET', '/api/discover/status').catch(() => ({}));

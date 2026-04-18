@@ -1899,7 +1899,6 @@ app.post('/api/discover/jobs/search', async (req, res) => {
 
   try {
     const existingTitles = db.getJobTitles();
-    db.clearJobListings();
     const contacts = db.getContacts();
 
     const alreadyKnown = existingTitles.length ? `\nDessa har redan hittats — hitta ANDRA: ${existingTitles.slice(0, 8).join(', ')}` : '';
@@ -1921,7 +1920,7 @@ Hitta 15-20 relevanta annonser/möjligheter. Svara ENBART med JSON-array:
 
 Intressant score 1-5 där 5 = perfekt match för Jonna. Svara ENBART med JSON-array.`;
 
-    const text = await claudeSearch(prompt, 3000);
+    const text = await claudeSearch(prompt, 5000);
     let listings = [];
     try {
       const jsonMatch = text.match(/\[[\s\S]*\]/);
@@ -2011,6 +2010,7 @@ app.post('/api/discover/stipends/search', async (req, res) => {
   const jonnaProfile = db.getJonnaProfile();
   const extraSites = jonnaProfile.discover_sites_stipends || [];
   try {
+    if (req.query.reset === 'true') db.clearStipendFindings();
     const existingNames = db.getStipendNames();
     const existingKeys = db.getStipendKeys();
     const existingKeySet = new Set(existingKeys.map(r =>
