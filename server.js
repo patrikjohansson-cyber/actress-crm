@@ -1823,66 +1823,72 @@ app.post('/api/contacts/:id/fetch-photo', async (req, res) => {
       return true;
     };
 
-    const scrapeForPhoto = async (pageUrl) => {
+    // Returnerar upp till maxCandidates bildkandidater från en sida
+    const scrapeForPhotoCandidates = async (pageUrl, maxCandidates = 3) => {
+      const candidates = [];
       try {
         const r = await fetch(pageUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) });
-        if (!r.ok) return null;
+        if (!r.ok) return candidates;
         const html = await r.text();
         const $ = cheerio.load(html);
-
         const abs = (src) => toAbs(src, pageUrl);
+        const addCandidate = (src) => {
+          if (!src || !isPhotoUrl(src)) return;
+          const url = abs(src);
+          if (url && !candidates.some(c => c.url === url)) candidates.push({ url, source: pageUrl });
+        };
 
         // 1. og:image / twitter:image
-        const ogImage = $('meta[property="og:image"]').attr('content');
-        if (ogImage && isPhotoUrl(ogImage)) return { url: abs(ogImage), source: pageUrl };
-        const twitterImage = $('meta[name="twitter:image"]').attr('content');
-        if (twitterImage && isPhotoUrl(twitterImage)) return { url: abs(twitterImage), source: pageUrl };
+        addCandidate($('meta[property="og:image"]').attr('content'));
+        addCandidate($('meta[name="twitter:image"]').attr('content'));
 
-        // 2. <img> i profil/bio/om-sektioner
+        // 2. Profil/bio-sektioner
         const profileSelectors = ['.profile img', '.bio img', '.about img', '.person img',
           '.portrait img', '.contact-photo img', '.headshot img', 'figure img', '.artist img'];
         for (const sel of profileSelectors) {
-          const src = $(sel).first().attr('src');
-          if (src && isPhotoUrl(src)) return { url: abs(src), source: pageUrl };
+          $(sel).each((_, el) => addCandidate($(el).attr('src')));
         }
 
-        // 3. <img> vars alt eller src innehåller personens förnamn eller efternamn
+        // 3. Bilder vars alt/src matchar personens namn
         const nameParts = contact.name.toLowerCase().split(' ');
-        let found = null;
         $('img').each((_, el) => {
-          if (found) return;
           const alt = ($(el).attr('alt') || '').toLowerCase();
           const src = $(el).attr('src') || '';
-          const matchesName = nameParts.some(p => p.length > 2 && (alt.includes(p) || src.toLowerCase().includes(p)));
-          if (matchesName && isPhotoUrl(src)) found = { url: abs(src), source: pageUrl };
+          if (nameParts.some(p => p.length > 2 && (alt.includes(p) || src.toLowerCase().includes(p)))) {
+            addCandidate(src);
+          }
         });
-        if (found) return found;
 
-        // 4. Första rimligt stora bild som inte verkar vara ikon/logotyp
+        // 4. Rimligt stora bilder
         $('img').each((_, el) => {
-          if (found) return;
           const src = $(el).attr('src') || '';
           const w = parseInt($(el).attr('width') || '0');
           const h = parseInt($(el).attr('height') || '0');
-          if (!isPhotoUrl(src)) return;
-          if ((w >= 100 && h >= 100) || (!w && !h && src.match(/\.(jpg|jpeg|png|webp)/i))) {
-            found = { url: abs(src), source: pageUrl };
+          if ((w >= 100 && h >= 100) || (!w && !h && src.match(/\.(jpg|jpeg|webp)/i))) {
+            addCandidate(src);
           }
         });
-        return found;
       } catch (e) {
         console.warn('[fetch-photo scrape]', pageUrl, e.message);
-        return null;
       }
+      return candidates.slice(0, maxCandidates);
     };
 
+    // Samla kandidater från alla sidor, prova max 3 via Haiku-kontroll
+    const MAX_ATTEMPTS = 3;
     let photoResult = null;
+    const allCandidates = [];
     for (const pageUrl of urlsToScrape) {
-      photoResult = await scrapeForPhoto(pageUrl);
+      const pageCandidates = await scrapeForPhotoCandidates(pageUrl);
+      allCandidates.push(...pageCandidates);
+    }
+    for (const candidate of allCandidates) {
       if (photoResult) break;
+      const saved = await downloadAndSave(candidate.url);
+      if (saved) { photoResult = { savedUrl: saved, source: candidate.source }; break; }
     }
 
-    // Steg 2: Fallback — web search med Claude
+    // Steg 2: Fallback — web search med Claude (upp till 3 URL-förslag)
     if (!photoResult) {
       const orgName = contact.organization || (enrichment.organization) || '';
       const tags = (() => { try { return JSON.parse(contact.tags || '[]'); } catch { return []; } })();
@@ -1919,21 +1925,19 @@ Hittade du ingen bra bild, svara:
 {"url":null,"source":""}`;
 
       const text = await claudeSearch(prompt, 2000, 'claude-sonnet-4-6', true);
-      const m = text.match(/\{[^}]+\}/);
-      if (m) {
-        const parsed = JSON.parse(m[0]);
-        if (parsed.url) photoResult = { url: parsed.url, source: parsed.source || 'web-search' };
+      // Sonnet kan ge flera URL:er — prova upp till MAX_ATTEMPTS
+      const urlMatches = [...text.matchAll(/\{[^}]+\}/g)].map(m => { try { return JSON.parse(m[0]); } catch { return null; } }).filter(p => p?.url);
+      for (const parsed of urlMatches.slice(0, MAX_ATTEMPTS)) {
+        const saved = await downloadAndSave(parsed.url);
+        if (saved) { photoResult = { savedUrl: saved, source: parsed.source || 'web-search' }; break; }
       }
     }
 
-    if (!photoResult?.url) return res.json({ url: null });
+    if (!photoResult?.savedUrl) return res.json({ url: null });
 
-    const photoUrl = await downloadAndSave(photoResult.url);
-    if (!photoUrl) return res.json({ url: null });
-
-    const result = db.addContactPhoto(req.params.id, photoUrl, photoResult.source || 'ai');
+    const result = db.addContactPhoto(req.params.id, photoResult.savedUrl, photoResult.source || 'ai');
     db.setPrimaryPhoto(req.params.id, result.lastInsertRowid);
-    res.json({ url: photoUrl });
+    res.json({ url: photoResult.savedUrl });
   } catch (err) {
     console.error('[fetch-photo]', err.stack || err.message);
     res.status(500).json({ error: err.message || 'Okänt serverfel vid bildsökning' });
