@@ -3473,14 +3473,21 @@ function resetAiRank() {
   _aiRankOffset = 0;
   _aiRankTotal = null;
   document.getElementById('ai-rank-results').innerHTML = '';
-  document.getElementById('ai-rank-status').classList.add('hidden');
-  document.getElementById('ai-rank-progress-wrap').classList.add('hidden');
-  document.getElementById('ai-rank-btn').disabled = false;
-  document.getElementById('ai-rank-btn').textContent = 'Kör nästa omgång';
+  document.getElementById('ai-rank-status').style.display = 'none';
+  document.getElementById('ai-rank-progress-wrap').style.display = 'none';
+  const btn = document.getElementById('ai-rank-btn');
+  btn.disabled = false;
+  btn.textContent = 'Kör nästa omgång';
+  btn.style.display = 'block';
+  const normalizeBtn = document.getElementById('ai-rank-normalize-btn');
+  normalizeBtn.style.display = 'none';
+  normalizeBtn.disabled = false;
+  normalizeBtn.textContent = 'Normalisera stjärnor globalt';
 }
 
 async function runAiRankBatch() {
   const btn = document.getElementById('ai-rank-btn');
+  const normalizeBtn = document.getElementById('ai-rank-normalize-btn');
   const statusEl = document.getElementById('ai-rank-status');
   const progressWrap = document.getElementById('ai-rank-progress-wrap');
   const bar = document.getElementById('ai-rank-bar');
@@ -3489,12 +3496,12 @@ async function runAiRankBatch() {
 
   btn.disabled = true;
   btn.textContent = '⏳ Analyserar…';
-  statusEl.classList.remove('hidden');
-  progressWrap.classList.remove('hidden');
+  statusEl.style.display = 'block';
+  progressWrap.style.display = 'block';
 
   const from = _aiRankOffset + 1;
   const to = _aiRankOffset + 25;
-  statusEl.textContent = `Analyserar kontakt ${from}–${to}…`;
+  statusEl.textContent = `Analyserar kontakt ${from}–${to}… (bara kontakter med AI-data)`;
 
   try {
     const data = await api('POST', '/api/contacts/ai-rank-batch', { offset: _aiRankOffset });
@@ -3503,23 +3510,22 @@ async function runAiRankBatch() {
 
     const pct = Math.round((_aiRankOffset / _aiRankTotal) * 100);
     bar.style.width = `${Math.min(100, pct)}%`;
-    progressLabel.textContent = `${Math.min(_aiRankOffset, _aiRankTotal)} av ${_aiRankTotal} kontakter klara`;
+    progressLabel.textContent = `${Math.min(_aiRankOffset, _aiRankTotal)} av ${_aiRankTotal} kontakter analyserade`;
 
-    // Visa resultaten för denna omgång
     if (data.results.length) {
       const html = data.results.map(r => `
-        <div class="flex items-center gap-2 py-1 border-b last:border-0">
-          <span class="text-amber-400 shrink-0 w-10">${r.score ? '●'.repeat(r.score) : '○'}</span>
-          <span class="font-medium text-gray-800 shrink-0">${escHtml(r.name)}</span>
-          <span class="text-gray-400 truncate">${escHtml(r.reason || '')}</span>
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rule);">
+          <span style="color:#d97706;font-size:11px;min-width:36px;font-weight:700;">${r.rawScore}/10</span>
+          <span style="font-weight:600;color:var(--ink);white-space:nowrap;">${escHtml(r.name)}</span>
+          <span style="color:var(--soft);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.reason || '')}</span>
         </div>`).join('');
       resultsEl.insertAdjacentHTML('afterbegin', html);
     }
 
     if (data.done) {
-      statusEl.textContent = `Klar! Alla ${_aiRankTotal} kontakter rankade.`;
-      btn.textContent = 'Alla klara ✓';
-      loadContacts();
+      statusEl.textContent = `Råpoäng klara för ${_aiRankTotal} kontakter. Normalisera nu för att fördela stjärnor rättvist.`;
+      btn.style.display = 'none';
+      normalizeBtn.style.display = 'block';
     } else {
       const nextFrom = _aiRankOffset + 1;
       const nextTo = Math.min(_aiRankOffset + 25, _aiRankTotal);
@@ -3531,6 +3537,23 @@ async function runAiRankBatch() {
     statusEl.textContent = 'Fel: ' + e.message;
     btn.disabled = false;
     btn.textContent = 'Försök igen';
+  }
+}
+
+async function normalizeRanks() {
+  const normalizeBtn = document.getElementById('ai-rank-normalize-btn');
+  const statusEl = document.getElementById('ai-rank-status');
+  normalizeBtn.disabled = true;
+  normalizeBtn.textContent = '⏳ Normaliserar…';
+  try {
+    const data = await api('POST', '/api/contacts/normalize-ranks', {});
+    statusEl.textContent = `Klart! ${data.normalized} kontakter fick sina stjärnor omfördelade baserat på hela populationen.`;
+    normalizeBtn.textContent = 'Normalisering klar ✓';
+    loadContacts();
+  } catch (e) {
+    statusEl.textContent = 'Fel vid normalisering: ' + e.message;
+    normalizeBtn.disabled = false;
+    normalizeBtn.textContent = 'Försök normalisera igen';
   }
 }
 
@@ -7115,9 +7138,9 @@ async function startBulkEnrich() {
       <button onclick="document.getElementById('ai-rank-modal').classList.add('hidden')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--soft);">✕</button>
     </div>
     <div style="padding:20px 24px;overflow-y:auto;flex:1;">
-      <p class="t-small" style="color:var(--soft);margin-bottom:16px;">AI analyserar kontakterna och sätter 0–5 prickar baserat på branschvikt och jobbpotential för Jonna.</p>
+      <p class="t-small" style="color:var(--soft);margin-bottom:16px;">AI analyserar kontakter som redan har AI-data och ger råpoäng 1–10. Sedan normaliseras stjärnor globalt så att rätt personer hamnar i topp — oavsett vilken batch de låg i.</p>
       <div id="ai-rank-status" class="t-small" style="font-weight:600;color:var(--ink);margin-bottom:8px;display:none;"></div>
-      <div id="ai-rank-progress-wrap" class="hidden" style="margin-bottom:16px;">
+      <div id="ai-rank-progress-wrap" style="display:none;margin-bottom:16px;">
         <div class="progress-track" style="margin-bottom:4px;">
           <div id="ai-rank-bar" class="progress-fill" style="width:0%;background:var(--mustard);"></div>
         </div>
@@ -7127,6 +7150,7 @@ async function startBulkEnrich() {
     </div>
     <div style="padding:16px 24px;border-top:1px solid var(--rule);display:flex;gap:8px;flex-shrink:0;">
       <button id="ai-rank-btn" onclick="runAiRankBatch()" class="btn btn-primary" style="flex:1;justify-content:center;">Kör nästa omgång</button>
+      <button id="ai-rank-normalize-btn" onclick="normalizeRanks()" class="btn btn-primary" style="flex:1;justify-content:center;display:none;background:var(--teal);">Normalisera stjärnor globalt</button>
       <button onclick="resetAiRank()" class="btn btn-ghost btn-sm" title="Börja om från kontakt 1">↺ Börja om</button>
     </div>
   </div>

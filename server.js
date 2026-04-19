@@ -767,12 +767,20 @@ app.post('/api/contacts/auto-priority', (req, res) => {
 });
 
 // ── AI-rankning av branschvikt ─────────────────────────────────
+// Fas 1: AI ger råpoäng 1–10 per kontakt (sparas i enrichment_data.ai_rank_raw)
+// Fas 2: normalize-endpoint delar ut stjärnor 1–5 globalt baserat på percentil
 app.post('/api/contacts/ai-rank-batch', async (req, res) => {
   const BATCH = 25;
   const offset = parseInt(req.body?.offset ?? 0);
 
-  // Hämta alla kontakter sorterade på priority (varmast först)
-  const all = db.getContacts({}).sort((a, b) => (b.priority || 5) - (a.priority || 5));
+  // Endast kontakter med befintlig AI-data
+  const all = db.getContacts({})
+    .filter(c => {
+      try { const e = JSON.parse(c.enrichment_data || '{}'); return Object.keys(e).length > 0; }
+      catch { return false; }
+    })
+    .sort((a, b) => (b.priority || 5) - (a.priority || 5));
+
   const batch = all.slice(offset, offset + BATCH);
   if (!batch.length) return res.json({ results: [], total: all.length, offset, done: true });
 
@@ -786,22 +794,25 @@ app.post('/api/contacts/ai-rank-batch', async (req, res) => {
     return `${i + 1}. ${c.name} | Roll: ${c.role || '?'} | Org: ${c.organization || c.org_names || '?'} | Interaktioner: ${interactionCount}${bio ? ' | Bio: ' + bio : ''}${prods ? ' | Gem. produktioner: ' + prods : ''}`;
   }).join('\n');
 
-  const prompt = `Du bedömer hur branschviktiga dessa kontakter är för en skådespelerska inom svensk teater/film och hur relevanta de är för framtida jobbmöjligheter.
+  const prompt = `Du bedömer hur branschviktiga dessa kontakter är för en skådespelerska inom svensk teater/film.
 
 ${jonnaContext ? `OM SKÅDESPELERSKAN:\n${jonnaContext}\n` : ''}
 
-Ge varje kontakt ett poäng 1–5:
-5 = Nyckelperson i branschen, hög sannolikhet att ge jobb (regissörer, castingchefer, agenter på stora scener)
-4 = Viktig branschperson, god potential
-3 = Relevant kontakt, möjlig framtida samarbetspartner
-2 = Perifer branschkoppling eller oklar relevans
-1 = Troligen inte relevant för karriären
+Ge varje kontakt ett RAW-POÄNG 1–10 baserat på ABSOLUTA kriterier (inte relativt mot andra i listan).
+Skalan är avsiktligt tuff – de flesta hamnar på 3–5. Mycket få förtjänar 8–10.
+
+10 = Topp-regissör/castingchef på Dramaten/SVT/stora produktionsbolag, direkt jobbpåverkan
+8–9 = Viktig regissör/producent/agent på etablerad scen eller TV-produktion
+6–7 = Regissör/producent på mindre scen, frilansprojekt med viss räckvidd
+4–5 = Kollega, assistent, administratör eller perifer branschperson
+2–3 = Marginell branschkoppling, oklart hur de kan hjälpa karriären
+1 = Ingen tydlig branschrelevans
 
 KONTAKTER:
 ${contactLines}
 
-Svara ENBART med JSON-array (en post per kontakt, i samma ordning):
-[{"index":1,"score":4,"reason":"Regissör på Dramaten, gemensam produktion"}]`;
+Svara ENBART med JSON-array (en post per kontakt, i exakt samma ordning):
+[{"index":1,"score":7,"reason":"Regissör på Riksteatern, gemensam produktion 2023"}]`;
 
   try {
     const msg = await anthropic.messages.create({
@@ -821,7 +832,7 @@ Svara ENBART med JSON-array (en post per kontakt, i samma ordning):
     try {
       rankings = JSON.parse(m[0]);
     } catch (parseErr) {
-      console.log('[AI-RANK] JSON-PARSE FEL:', parseErr.message, 'text:', m[0].slice(0, 200));
+      console.log('[AI-RANK] JSON-PARSE FEL:', parseErr.message);
       return res.json({ results: [], total: all.length, offset, nextOffset: offset + BATCH, done: offset + BATCH >= all.length });
     }
     console.log('[AI-RANK] ANTAL RANKINGS:', rankings.length, 'Första:', JSON.stringify(rankings[0]));
@@ -830,21 +841,53 @@ Svara ENBART med JSON-array (en post per kontakt, i samma ordning):
     for (const r of rankings) {
       const contact = batch[r.index - 1];
       if (!contact) { console.log('[AI-RANK] Ingen kontakt för index', r.index); continue; }
-      if (!r.score) { console.log('[AI-RANK] Score saknas/noll för', contact.name, r); continue; }
-      const score = Math.min(5, Math.max(0, Math.round(r.score)));
-      console.log('[AI-RANK] Sparar', contact.name, 'score:', score);
-      db.updateContact(contact.id, { industry_star: score });
+      if (!r.score) { console.log('[AI-RANK] Score saknas/noll för', contact.name); continue; }
+      const rawScore = Math.min(10, Math.max(1, Math.round(r.score)));
+      console.log('[AI-RANK] Sparar råpoäng för', contact.name, ':', rawScore);
+      // Spara råpoäng – stjärnor sätts via normalize-endpoint efter alla batcher
       const enrichment = (() => { try { return JSON.parse(contact.enrichment_data || '{}'); } catch { return {}; } })();
-      db.saveEnrichment(contact.id, { ...enrichment, ai_rank_reason: r.reason || null });
-      results.push({ id: contact.id, name: contact.name, score: r.score, reason: r.reason });
+      db.saveEnrichment(contact.id, { ...enrichment, ai_rank_raw: rawScore, ai_rank_reason: r.reason || null });
+      // Sätt preliminär stjärnrating (kan skrivas om av normalize)
+      const starPrelim = rawScore <= 2 ? 1 : rawScore <= 4 ? 2 : rawScore <= 6 ? 3 : rawScore <= 8 ? 4 : 5;
+      db.updateContact(contact.id, { industry_star: starPrelim });
+      results.push({ id: contact.id, name: contact.name, rawScore, reason: r.reason });
     }
 
-    console.log('[AI-RANK] KLAR: sparade', results.length, 'av', batch.length, 'kontakter');
-    res.json({ results, total: all.length, offset, nextOffset: offset + BATCH, done: offset + BATCH >= all.length });
+    const isDone = offset + BATCH >= all.length;
+    console.log('[AI-RANK] KLAR: sparade', results.length, 'av', batch.length, '| done:', isDone);
+    res.json({ results, total: all.length, offset, nextOffset: offset + BATCH, done: isDone });
   } catch (err) {
     console.log('[AI-RANK] FEL:', err.message);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── Normalisera stjärnor baserat på globala percentiler ────────
+// Körs efter att alla batcher är klara. Fördelar 1–5 stjärnor
+// baserat på position i hela populationen (inte per batch).
+app.post('/api/contacts/normalize-ranks', (req, res) => {
+  const all = db.getContacts({}).map(c => {
+    try {
+      const e = JSON.parse(c.enrichment_data || '{}');
+      return e.ai_rank_raw ? { id: c.id, raw: e.ai_rank_raw } : null;
+    } catch { return null; }
+  }).filter(Boolean);
+
+  if (!all.length) return res.json({ normalized: 0 });
+
+  // Sortera fallande
+  all.sort((a, b) => b.raw - a.raw);
+  const n = all.length;
+
+  // Percentilgränser: top 8% → 5★, 8–25% → 4★, 25–55% → 3★, 55–80% → 2★, rest → 1★
+  all.forEach((c, i) => {
+    const pct = i / n;
+    const stars = pct < 0.08 ? 5 : pct < 0.25 ? 4 : pct < 0.55 ? 3 : pct < 0.80 ? 2 : 1;
+    db.updateContact(c.id, { industry_star: stars });
+  });
+
+  console.log('[AI-RANK] Normaliserade', n, 'kontakter');
+  res.json({ normalized: n });
 });
 
 app.get('/api/network', (req, res) => {
