@@ -833,6 +833,12 @@ app.get('/api/network', (req, res) => {
   res.json(db.getNetworkData());
 });
 
+app.get('/api/deploy-status/debug', async (req, res) => {
+  const token = process.env.RAILWAY_TOKEN;
+  const serviceId = process.env.RAILWAY_SERVICE_ID;
+  res.json({ hasToken: !!token, tokenLength: token?.length, serviceId: serviceId || null });
+});
+
 app.get('/api/deploy-status', async (req, res) => {
   const token = process.env.RAILWAY_TOKEN;
   const serviceId = process.env.RAILWAY_SERVICE_ID;
