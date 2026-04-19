@@ -460,7 +460,7 @@ Svara ENBART med JSON:
 }
 
 Om inget hittas, returnera tomma arrayer. Svara ENBART med JSON.`;
-    const text = await claudeSearch(prompt, 2000, 'claude-haiku-4-5-20251001', false);
+    const text = await claudeSearch(prompt, 2000, 'claude-sonnet-4-6', true);
     let pressData = {};
     try {
       const m = text.match(/\{[\s\S]*\}/);
