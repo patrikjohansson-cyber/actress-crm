@@ -437,7 +437,7 @@ app.post('/api/projects/:id/press', async (req, res) => {
     const actorNames = projectContacts.slice(0, 5).map(c => c.name).join(', ');
     const actorHint = actorNames ? `\nMedverkande: ${actorNames}` : '';
 
-    const searchTitle = `"${project.title}" teaterföreställning${project.organization ? ' ' + project.organization : ''}`;
+    const searchTitle = `${project.title}${project.organization ? ' ' + project.organization : ''} teater${project.start_date ? ' ' + project.start_date.slice(0,4) : ''}`;
 
     const prompt = `Sök efter pressrecensioner, tidningsartiklar och nyheter om teaterföreställningen "${project.title}"${project.organization ? ' av ' + project.organization : ''}${project.start_date ? ' (' + project.start_date.slice(0,4) + ')' : ''} i Sverige.${actorHint}${linkHint}${contextHint}
 
