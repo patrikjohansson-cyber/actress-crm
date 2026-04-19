@@ -3501,12 +3501,13 @@ async function runAiRankBatch() {
   statusEl.style.display = 'block';
   progressWrap.style.display = 'block';
 
+  const minPriority = parseInt(document.getElementById('ai-rank-min-priority')?.value || '3');
   const from = _aiRankOffset + 1;
   const to = _aiRankOffset + 25;
-  statusEl.textContent = `Analyserar kontakt ${from}–${to}… (bara kontakter med AI-data)`;
+  statusEl.textContent = `Analyserar kontakt ${from}–${to}… (prioritet ${minPriority}+, med AI-data)`;
 
   try {
-    const data = await api('POST', '/api/contacts/ai-rank-batch', { offset: _aiRankOffset });
+    const data = await api('POST', '/api/contacts/ai-rank-batch', { offset: _aiRankOffset, minPriority });
     _aiRankTotal = data.total;
     _aiRankOffset = data.nextOffset;
 
@@ -7142,7 +7143,18 @@ async function startBulkEnrich() {
       <button onclick="document.getElementById('ai-rank-modal').classList.add('hidden')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--soft);">✕</button>
     </div>
     <div style="padding:20px 24px;overflow-y:auto;flex:1;">
-      <p class="t-small" style="color:var(--soft);margin-bottom:16px;">AI analyserar kontakter som redan har AI-data och ger råpoäng 1–10. Sedan normaliseras stjärnor globalt så att rätt personer hamnar i topp — oavsett vilken batch de låg i.</p>
+      <p class="t-small" style="color:var(--soft);margin-bottom:12px;">AI analyserar kontakter som redan har AI-data och ger råpoäng 1–10. Sedan normaliseras stjärnor globalt så att rätt personer hamnar i topp — oavsett vilken batch de låg i.</p>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <label class="t-small" style="color:var(--ink);white-space:nowrap;">Minsta prioritet:</label>
+        <select id="ai-rank-min-priority" onchange="resetAiRank()" class="filter-select" style="font-size:13px;">
+          <option value="3">3 — hoppa över nivå 1–2</option>
+          <option value="4">4</option>
+          <option value="5">5 — neutral och uppåt</option>
+          <option value="6">6</option>
+          <option value="7">7 — varma kontakter</option>
+          <option value="1">1 — alla kontakter</option>
+        </select>
+      </div>
       <div id="ai-rank-status" class="t-small" style="font-weight:600;color:var(--ink);margin-bottom:8px;display:none;"></div>
       <div id="ai-rank-progress-wrap" style="display:none;margin-bottom:16px;">
         <div class="progress-track" style="margin-bottom:4px;">

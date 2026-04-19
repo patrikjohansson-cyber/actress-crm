@@ -772,13 +772,14 @@ app.post('/api/contacts/auto-priority', (req, res) => {
 app.post('/api/contacts/ai-rank-batch', async (req, res) => {
   const BATCH = 25;
   const offset = parseInt(req.body?.offset ?? 0);
+  const minPriority = parseInt(req.body?.minPriority ?? 3);
 
-  // Endast kontakter med AI-data och utan manuellt låst branchvikt
+  // Kontakter med AI-data, rätt prioritet och utan manuellt låst branchvikt
   const all = db.getContacts({})
     .filter(c => {
       try {
         const e = JSON.parse(c.enrichment_data || '{}');
-        return Object.keys(e).length > 0 && !e.ai_rank_locked;
+        return Object.keys(e).length > 0 && !e.ai_rank_locked && (c.priority || 5) >= minPriority;
       } catch { return false; }
     })
     .sort((a, b) => (b.priority || 5) - (a.priority || 5));
