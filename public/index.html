@@ -2348,7 +2348,15 @@ function renderContacts(contacts, orgs = [], contactJobs = {}, contactStipends =
         <div class="flex-1 min-w-0">
           <div class="font-semibold text-gray-900 truncate">${escHtml(c.name)}</div>
           ${c.org_names ? `<div class="text-xs text-gray-500 truncate">${escHtml(c.org_names)}</div>` : ''}
-          ${(() => { try { const r = JSON.parse(c.roles || '[]'); return r.length ? `<div class="text-xs text-gray-400 truncate">${r.join(' · ')}</div>` : ''; } catch { return ''; } })()}
+          ${(() => {
+            try { const r = JSON.parse(c.roles || '[]'); return r.length ? `<div class="text-xs text-gray-400 truncate">${r.join(' · ')}</div>` : ''; } catch { return ''; }
+          })()}
+          ${(() => {
+            if (!c.linked_project_roles) return '';
+            const projRoles = [...new Set(c.linked_project_roles.split('|||').filter(Boolean))];
+            if (!projRoles.length) return '';
+            return `<div class="text-xs truncate" style="color:#9b8ea0;">${projRoles.join(' · ')}</div>`;
+          })()}
         </div>
       </div>
       ${badges.length ? `<div class="flex gap-1 flex-wrap mb-1">${badges.join('')}</div>` : ''}

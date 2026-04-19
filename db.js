@@ -213,7 +213,9 @@ module.exports = {
        WHERE co.contact_id = c.id) as org_names,
       (SELECT GROUP_CONCAT(p.title, '|||') FROM projects p
        JOIN contact_projects cp ON p.id = cp.project_id
-       WHERE cp.contact_id = c.id) as linked_project_names
+       WHERE cp.contact_id = c.id) as linked_project_names,
+      (SELECT GROUP_CONCAT(cp.role_in_project, '|||') FROM contact_projects cp
+       WHERE cp.contact_id = c.id AND cp.role_in_project IS NOT NULL AND cp.role_in_project != '') as linked_project_roles
       FROM contacts c`;
     if (where.length) q += ' WHERE ' + where.join(' AND ');
     q += ' ORDER BY c.priority ASC, c.name ASC';
