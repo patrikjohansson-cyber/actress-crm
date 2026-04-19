@@ -773,11 +773,13 @@ app.post('/api/contacts/ai-rank-batch', async (req, res) => {
   const BATCH = 25;
   const offset = parseInt(req.body?.offset ?? 0);
 
-  // Endast kontakter med befintlig AI-data
+  // Endast kontakter med AI-data och utan manuellt låst branchvikt
   const all = db.getContacts({})
     .filter(c => {
-      try { const e = JSON.parse(c.enrichment_data || '{}'); return Object.keys(e).length > 0; }
-      catch { return false; }
+      try {
+        const e = JSON.parse(c.enrichment_data || '{}');
+        return Object.keys(e).length > 0 && !e.ai_rank_locked;
+      } catch { return false; }
     })
     .sort((a, b) => (b.priority || 5) - (a.priority || 5));
 
@@ -866,10 +868,11 @@ Svara ENBART med JSON-array (en post per kontakt, i exakt samma ordning):
 // Körs efter att alla batcher är klara. Fördelar 1–5 stjärnor
 // baserat på position i hela populationen (inte per batch).
 app.post('/api/contacts/normalize-ranks', (req, res) => {
+  // Hoppa över manuellt låsta – rör bara AI-rankade kontakter
   const all = db.getContacts({}).map(c => {
     try {
       const e = JSON.parse(c.enrichment_data || '{}');
-      return e.ai_rank_raw ? { id: c.id, raw: e.ai_rank_raw } : null;
+      return (e.ai_rank_raw && !e.ai_rank_locked) ? { id: c.id, raw: e.ai_rank_raw } : null;
     } catch { return null; }
   }).filter(Boolean);
 
@@ -888,6 +891,15 @@ app.post('/api/contacts/normalize-ranks', (req, res) => {
 
   console.log('[AI-RANK] Normaliserade', n, 'kontakter');
   res.json({ normalized: n });
+});
+
+// Lås manuellt satt branchvikt – AI-rankning hoppar över denna kontakt
+app.post('/api/contacts/:id/lock-rank', (req, res) => {
+  const contact = db.getContact(parseInt(req.params.id));
+  if (!contact) return res.status(404).json({ error: 'Kontakt saknas' });
+  const enrichment = (() => { try { return JSON.parse(contact.enrichment_data || '{}'); } catch { return {}; } })();
+  db.saveEnrichment(contact.id, { ...enrichment, ai_rank_locked: true });
+  res.json({ ok: true });
 });
 
 app.get('/api/network', (req, res) => {

@@ -2218,12 +2218,14 @@ function toggleIndustryStarFilter() {
 
 async function toggleIndustryStar(id, current) {
   await api('PATCH', `/api/contacts/${id}`, { industry_star: (current + 1) % 6 });
+  await api('POST', `/api/contacts/${id}/lock-rank`, {});
   openContactPanel(id);
 }
 
 async function cycleIndustryStar(id, current, btn) {
   const next = (current + 1) % 6;
   await api('PATCH', `/api/contacts/${id}`, { industry_star: next });
+  await api('POST', `/api/contacts/${id}/lock-rank`, {});
   btn.textContent = next ? '●'.repeat(next) : '○';
   btn.className = btn.className.replace(
     next ? 'text-gray-200 hover:text-amber-300' : 'text-amber-400',
@@ -3522,10 +3524,12 @@ async function runAiRankBatch() {
       resultsEl.insertAdjacentHTML('afterbegin', html);
     }
 
+    // Visa normaliseringsknapp redan efter första batchen
+    normalizeBtn.style.display = 'block';
+
     if (data.done) {
-      statusEl.textContent = `Råpoäng klara för ${_aiRankTotal} kontakter. Normalisera nu för att fördela stjärnor rättvist.`;
+      statusEl.textContent = `Råpoäng klara för ${_aiRankTotal} kontakter. Normalisera för att fördela stjärnor rättvist.`;
       btn.style.display = 'none';
-      normalizeBtn.style.display = 'block';
     } else {
       const nextFrom = _aiRankOffset + 1;
       const nextTo = Math.min(_aiRankOffset + 25, _aiRankTotal);
