@@ -809,22 +809,40 @@ Svara ENBART med JSON-array (en post per kontakt, i samma ordning):
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }],
     });
-    const m = msg.content[0].text.match(/\[[\s\S]*\]/);
-    const rankings = JSON.parse(m ? m[0] : '[]');
+    const rawText = msg.content[0].text;
+    console.log('[AI-RANK] RAW RESPONSE:', rawText.slice(0, 500));
+
+    const m = rawText.match(/\[[\s\S]*\]/);
+    if (!m) {
+      console.log('[AI-RANK] INGEN JSON-ARRAY HITTADES I SVARET');
+      return res.json({ results: [], total: all.length, offset, nextOffset: offset + BATCH, done: offset + BATCH >= all.length });
+    }
+    let rankings;
+    try {
+      rankings = JSON.parse(m[0]);
+    } catch (parseErr) {
+      console.log('[AI-RANK] JSON-PARSE FEL:', parseErr.message, 'text:', m[0].slice(0, 200));
+      return res.json({ results: [], total: all.length, offset, nextOffset: offset + BATCH, done: offset + BATCH >= all.length });
+    }
+    console.log('[AI-RANK] ANTAL RANKINGS:', rankings.length, 'Första:', JSON.stringify(rankings[0]));
 
     const results = [];
     for (const r of rankings) {
       const contact = batch[r.index - 1];
-      if (!contact || !r.score) continue;
-      db.updateContact(contact.id, { industry_star: Math.min(5, Math.max(0, Math.round(r.score))) });
-      // Spara motivering i enrichment_data
+      if (!contact) { console.log('[AI-RANK] Ingen kontakt för index', r.index); continue; }
+      if (!r.score) { console.log('[AI-RANK] Score saknas/noll för', contact.name, r); continue; }
+      const score = Math.min(5, Math.max(0, Math.round(r.score)));
+      console.log('[AI-RANK] Sparar', contact.name, 'score:', score);
+      db.updateContact(contact.id, { industry_star: score });
       const enrichment = (() => { try { return JSON.parse(contact.enrichment_data || '{}'); } catch { return {}; } })();
       db.saveEnrichment(contact.id, { ...enrichment, ai_rank_reason: r.reason || null });
       results.push({ id: contact.id, name: contact.name, score: r.score, reason: r.reason });
     }
 
+    console.log('[AI-RANK] KLAR: sparade', results.length, 'av', batch.length, 'kontakter');
     res.json({ results, total: all.length, offset, nextOffset: offset + BATCH, done: offset + BATCH >= all.length });
   } catch (err) {
+    console.log('[AI-RANK] FEL:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
