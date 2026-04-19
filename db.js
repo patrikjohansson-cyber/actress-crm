@@ -442,7 +442,7 @@ module.exports = {
   },
 
   getDashboardOpportunities() {
-    const jobs    = db.prepare('SELECT id, title, organization, deadline, url FROM job_listings ORDER BY found_at DESC LIMIT 5').all();
+    const jobs    = db.prepare('SELECT id, title, organization, deadline, url, interesting_score, interesting_reason FROM job_listings ORDER BY found_at DESC LIMIT 5').all();
     const stipends = db.prepare('SELECT id, person_name, organization, year, url FROM stipend_findings ORDER BY found_at DESC LIMIT 5').all();
     const grants  = db.prepare('SELECT id, title, organization, deadline, amount, url FROM grant_calls ORDER BY found_at DESC LIMIT 5').all();
     return { jobs, stipends, grants };

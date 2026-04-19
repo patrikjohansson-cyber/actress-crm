@@ -299,45 +299,56 @@ app.post('/api/projects/:id/enrich', async (req, res) => {
   try {
     const links = (() => { try { return JSON.parse(project.links || '[]'); } catch { return []; } })();
     const hasContext = (project.context_info || '').trim().length > 50;
+    const hasNotes   = (project.notes || '').trim().length > 30;
 
     // Skrapa länkarna och hämta sidinnehållet som text
     const scrapedPages = await Promise.all(links.map(async (l) => {
       try {
         const r = await fetch(ensureHttps(l.url), { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) });
-        if (!r.ok) return null;
+        if (!r.ok) return { url: l.url, label: l.label || '', text: null, failed: true };
         const html = await r.text();
         const $ = cheerio.load(html);
         $('script, style, nav, footer, header, [aria-hidden="true"]').remove();
-        const text = $('body').text().replace(/\s+/g, ' ').trim().slice(0, 3000);
-        return text ? { url: l.url, label: l.label || '', text } : null;
-      } catch { return null; }
+        const text = $('body').text().replace(/\s+/g, ' ').trim().slice(0, 4000);
+        return { url: l.url, label: l.label || '', text: text || null, failed: !text };
+      } catch { return { url: l.url, label: l.label || '', text: null, failed: true }; }
     }));
-    const validPages = scrapedPages.filter(Boolean);
+
+    const validPages  = scrapedPages.filter(p => p.text);
+    const failedPages = scrapedPages.filter(p => p.failed);
 
     // Känd info från projektkortet
     const knownLines = [
-      project.type        ? `Typ: ${project.type}` : '',
-      project.start_date  ? `Startdatum: ${project.start_date}` : '',
-      project.end_date    ? `Slutdatum: ${project.end_date}` : '',
-      project.director    ? `Regissör: ${project.director}` : '',
-      project.venue       ? `Scen/plats: ${project.venue}` : '',
-      project.notes       ? `Anteckningar: ${project.notes}` : '',
+      project.type       ? `Typ: ${project.type}` : '',
+      project.start_date ? `Startdatum: ${project.start_date}` : '',
+      project.end_date   ? `Slutdatum: ${project.end_date}` : '',
+      project.director   ? `Regissör: ${project.director}` : '',
+      project.venue      ? `Scen/plats: ${project.venue}` : '',
     ].filter(Boolean);
 
     const knownSection   = knownLines.length ? `\nKänd info:\n${knownLines.join('\n')}` : '';
+    // Sidor som skrapades framgångsrikt
     const pagesSection   = validPages.length
-      ? '\n\n' + validPages.map(p => `SIDA: ${p.url}${p.label ? ` (${p.label})` : ''}\n---\n${p.text}\n---`).join('\n\n')
+      ? '\n\n' + validPages.map(p => `SIDA (${p.url}):\n---\n${p.text}\n---`).join('\n\n')
+      : '';
+    // Sidor som inte gick att skrapa — be AI:n söka på dem istället
+    const failedSection  = failedPages.length
+      ? `\nSök och läs dessa URL:er: ${failedPages.map(p => p.url).join(', ')}`
+      : '';
+    // Anteckningar som primärkälla
+    const notesSection   = hasNotes
+      ? `\n\nANTECKNINGAR (primärkälla):\n---\n${project.notes}\n---`
       : '';
     const contextSection = hasContext
-      ? `\n\nÖVRIGT MATERIAL (intervju, presstext o.liknande):\n---\n${project.context_info}\n---`
+      ? `\n\nÖVRIGT MATERIAL:\n---\n${project.context_info}\n---`
       : '';
 
-    const hasMaterial = validPages.length > 0 || hasContext;
+    const hasMaterial = validPages.length > 0 || hasContext || hasNotes;
     const instruction = hasMaterial
-      ? 'Extrahera information ur materialet nedan om produktionen'
+      ? 'Extrahera information ur materialet nedan om produktionen. Sök även på URL:er som anges.'
       : 'Sök information om produktionen på webben';
 
-    const prompt = `${instruction}: "${project.title}"${project.organization ? ' av ' + project.organization : ''} (svensk teater, film eller scenkonst).${knownSection}${pagesSection}${contextSection}
+    const prompt = `${instruction}: "${project.title}"${project.organization ? ' av ' + project.organization : ''} (svensk teater, film eller scenkonst).${knownSection}${failedSection}${pagesSection}${notesSection}${contextSection}
 
 Svara ENBART med JSON:
 {
@@ -355,15 +366,17 @@ Svara ENBART med JSON:
 
 Försök hitta regissör, scen och så många medverkande som möjligt. Om inget hittas, returnera tomma strängar/arrayer. Svara ENBART med JSON.`;
 
-    const useWebSearch = !hasMaterial;
+    // Använd webbsök om vi inte har skrapat material ELLER om det finns misslyckade URL:er att besöka
+    const useWebSearch = !hasMaterial || failedPages.length > 0;
+    console.log(`[enrich] material:${hasMaterial} skrapade:${validPages.length} misslyckade:${failedPages.length} webbsök:${useWebSearch}`);
     const text = await claudeSearch(prompt, 4000, 'claude-sonnet-4-6', useWebSearch);
-    console.log('[enrich project] råsvar:', text?.slice(0, 500));
+    console.log('[enrich] råsvar:', text?.slice(0, 600));
     let info = {};
     try {
-      const m = text.match(/\{[\s\S]*?\}/s) || text.match(/\{[\s\S]*\}/);
+      const m = text.match(/\{[\s\S]*\}/);
       if (m) info = JSON.parse(m[0]);
     } catch (e) {
-      console.warn('[enrich project] JSON-parsning misslyckades:', e.message, '| text:', text?.slice(0, 300));
+      console.warn('[enrich] JSON-fel:', e.message, text?.slice(0, 200));
     }
 
     // Separera Jonnas info från övrig cast

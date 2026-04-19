@@ -242,6 +242,7 @@
     .view-body {
       padding: 32px 48px;
       max-width: 1100px;
+      overflow-x: hidden;
     }
 
     /* ── Knappar ── */
@@ -335,7 +336,9 @@
 
     /* ── Grid & layout helpers ── */
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-2 > * { min-width: 0; }
     .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .grid-3 > * { min-width: 0; }
     .flex-row { display: flex; align-items: center; gap: 8px; }
     .flex-between { display: flex; align-items: center; justify-content: space-between; }
     .flex-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -690,7 +693,7 @@
         </div>
         <div class="grid-3">
           <div>
-            <div class="t-micro" style="color:var(--soft);margin-bottom:8px;">Jobbannonser</div>
+            <div class="t-micro" style="color:var(--soft);margin-bottom:8px;word-break:break-word;">Jobb&shy;annonser</div>
             <div id="dash-opp-jobs" class="space-y-sm"></div>
           </div>
           <div>
@@ -698,7 +701,7 @@
             <div id="dash-opp-stipends" class="space-y-sm"></div>
           </div>
           <div>
-            <div class="t-micro" style="color:var(--soft);margin-bottom:8px;">Projektbidrag</div>
+            <div class="t-micro" style="color:var(--soft);margin-bottom:8px;word-break:break-word;">Projekt&shy;bidrag</div>
             <div id="dash-opp-grants" class="space-y-sm"></div>
           </div>
         </div>
@@ -1967,11 +1970,17 @@ async function loadDashboardOpportunities() {
     const empty = '<p class="text-xs text-gray-400 py-1">Inga fynd ännu.</p>';
 
     document.getElementById('dash-opp-jobs').innerHTML = opp.jobs.length
-      ? opp.jobs.map(j => `
-        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-2.5 hover:border-rose-300 cursor-pointer" onclick="showView('discover')">
-          <div class="text-xs font-medium text-gray-800 truncate">${escHtml(j.title)}</div>
-          <div class="text-xs text-gray-400 truncate">${escHtml(j.organization || '')}${j.deadline ? ' · ' + escHtml(j.deadline) : ''}</div>
-        </div>`).join('')
+      ? opp.jobs.map(j => {
+          const scoreColor = j.interesting_score >= 7 ? '#16a34a' : j.interesting_score >= 4 ? '#d97706' : '#9ca3af';
+          return `<div style="background:#fff;border-radius:16px;border:1px solid #f0ece4;box-shadow:0 1px 3px rgba(0,0,0,0.06);padding:10px 12px;cursor:pointer;overflow:hidden;" onclick="showView('discover')">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
+              <div style="font-size:12px;font-weight:500;color:#1f2937;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${escHtml(j.title)}</div>
+              ${j.interesting_score ? `<span style="font-size:10px;font-weight:700;color:${scoreColor};white-space:nowrap;flex-shrink:0;">${j.interesting_score}/10</span>` : ''}
+            </div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${escHtml(j.organization || '')}${j.deadline ? ' · ' + escHtml(j.deadline) : ''}</div>
+            ${j.interesting_reason ? `<div style="font-size:10px;color:#6b7280;margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.4;">${escHtml(j.interesting_reason)}</div>` : ''}
+          </div>`;
+        }).join('')
       : empty;
 
     document.getElementById('dash-opp-stipends').innerHTML = opp.stipends.length
