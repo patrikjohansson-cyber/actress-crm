@@ -903,58 +903,6 @@ app.post('/api/contacts/:id/lock-rank', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── ENGÅNG: Höj prioritet till 5 för kontakter med badge och prioritet ≤ 4 ──
-app.post('/api/admin/boost-badge-priority', (req, res) => {
-  const contacts = db.getContacts({});
-  const jobs = db.getJobListings ? db.getJobListings() : [];
-
-  // Bygg uppslagstabell: contactId → har kopplad jobbmöjlighet
-  const contactHasJob = new Set();
-  for (const job of jobs) {
-    try {
-      const kc = typeof job.known_contacts === 'string' ? JSON.parse(job.known_contacts || '[]') : (job.known_contacts || []);
-      for (const kcon of kc) { if (kcon.id) contactHasJob.add(kcon.id); }
-    } catch {}
-  }
-
-  // Kontakter med stipendiematchning
-  const stipendContacts = new Set(
-    db.getStipendFindings().filter(s => s.matched_contact).map(s => s.matched_contact)
-  );
-
-  const updated = [];
-  for (const c of contacts) {
-    if ((c.priority || 5) > 4) continue; // redan prioritet 5+
-
-    const enr = (() => { try { return JSON.parse(c.enrichment_data || '{}'); } catch { return {}; } })();
-    const hasSchool    = (enr.shared_education || []).length > 0;
-    const hasProd      = (enr.shared_productions || []).length > 0;
-    const hasProject   = !!(c.linked_project_names);
-    const hasJob       = contactHasJob.has(c.id);
-    const hasStipend   = stipendContacts.has(c.id);
-
-    if (hasSchool || hasProd || hasProject || hasJob || hasStipend) {
-      db.updateContact(c.id, { priority: 5 });
-      updated.push({ id: c.id, name: c.name, was: c.priority || 5, badges: [hasSchool&&'skola', hasProd&&'produktion', hasProject&&'projekt', hasJob&&'jobb', hasStipend&&'stipendium'].filter(Boolean) });
-    }
-  }
-
-  res.json({ updated: updated.length, contacts: updated });
-});
-
-// ── ENGÅNG: Höj prioritet till 4 för kontakter med organisation och prioritet < 4 ──
-app.post('/api/admin/boost-org-priority', (req, res) => {
-  const contacts = db.getContacts({});
-  const updated = [];
-  for (const c of contacts) {
-    if ((c.priority || 5) >= 4) continue;
-    if (c.organization || c.org_names) {
-      db.updateContact(c.id, { priority: 4 });
-      updated.push({ id: c.id, name: c.name, was: c.priority || 5, org: c.organization || c.org_names });
-    }
-  }
-  res.json({ updated: updated.length, contacts: updated });
-});
 
 app.get('/api/network', (req, res) => {
   res.json(db.getNetworkData());
