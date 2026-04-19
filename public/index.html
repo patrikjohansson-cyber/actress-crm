@@ -779,8 +779,10 @@
           <option>Konstnärlig ledare</option>
           <option>Casting</option>
           <option>Producent</option>
+          <option>TV-producent</option>
           <option>Agent</option>
           <option>Journalist</option>
+          <option>Musiker</option>
           <option>Övrigt</option>
         </select>
         <select id="priorityFilter" onchange="loadContacts()" class="filter-select">
@@ -2874,7 +2876,7 @@ function renderContactPanel(c, interactions, projects, orgs = [], contactOrgs = 
   const sharedProductions = enrichment?.shared_productions || [];
   const hasEnrichment = !!(enrichment?.bio || (enrichment?.productions || []).length);
   const roles = (() => { try { return JSON.parse(c.roles || '[]'); } catch { return []; } })();
-  const roleOptions = ['Skådespelare','Mimskådespelare','Regissör','Konstnärlig ledare','Regiassistent','Scripta','Casting','Producent','Agent','Journalist','Koreograf','Övrigt'];
+  const roleOptions = ['Skådespelare','Mimskådespelare','Regissör','Konstnärlig ledare','Regiassistent','Scripta','Casting','Producent','TV-producent','Agent','Journalist','Musiker','Koreograf','Övrigt'];
 
   // Kopplad organisation via e-postdomän
   const emailDomain = c.email ? c.email.split('@')[1] : null;
