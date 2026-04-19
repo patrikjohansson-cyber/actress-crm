@@ -3520,12 +3520,13 @@ async function runAiRankBatch() {
   progressWrap.style.display = 'block';
 
   const minPriority = parseInt(document.getElementById('ai-rank-min-priority')?.value || '3');
+  const skipRanked = document.getElementById('ai-rank-skip-ranked')?.checked ?? true;
   const from = _aiRankOffset + 1;
   const to = _aiRankOffset + 25;
   statusEl.textContent = `Analyserar kontakt ${from}–${to}… (prioritet ${minPriority}+, med AI-data)`;
 
   try {
-    const data = await api('POST', '/api/contacts/ai-rank-batch', { offset: _aiRankOffset, minPriority });
+    const data = await api('POST', '/api/contacts/ai-rank-batch', { offset: _aiRankOffset, minPriority, skipRanked });
     _aiRankTotal = data.total;
     _aiRankOffset = data.nextOffset;
 
@@ -7173,6 +7174,10 @@ async function startBulkEnrich() {
           <option value="1">1 — alla kontakter</option>
         </select>
       </div>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:16px;cursor:pointer;">
+        <input type="checkbox" id="ai-rank-skip-ranked" checked onchange="resetAiRank()" style="width:14px;height:14px;cursor:pointer;">
+        <span class="t-small" style="color:var(--ink);">Hoppa över redan rankade</span>
+      </label>
       <div id="ai-rank-status" class="t-small" style="font-weight:600;color:var(--ink);margin-bottom:8px;display:none;"></div>
       <div id="ai-rank-progress-wrap" style="display:none;margin-bottom:16px;">
         <div class="progress-track" style="margin-bottom:4px;">
