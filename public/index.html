@@ -1969,11 +1969,16 @@ async function loadDashboardOpportunities() {
     document.getElementById('dash-opp-jobs').innerHTML = opp.jobs.length
       ? opp.jobs.map(j => {
           const scoreColor = j.interesting_score >= 7 ? '#16a34a' : j.interesting_score >= 4 ? '#d97706' : '#9ca3af';
+          const isCasting = ['casting','audition','open_call'].includes(j.opportunity_subtype);
+          const typeLabel = isCasting ? 'Casting' : 'Jobb';
+          const typeBg = isCasting ? '#fdf2f8' : '#eff6ff';
+          const typeColor = isCasting ? '#9d174d' : '#1e40af';
           return `<div style="background:#fff;border-radius:16px;border:1px solid #f0ece4;box-shadow:0 1px 3px rgba(0,0,0,0.06);padding:10px 12px;cursor:pointer;overflow:hidden;" onclick="showView('discover')">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
-              <div style="font-size:12px;font-weight:500;color:#1f2937;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${escHtml(j.title)}</div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:4px;">
+              <span style="font-size:9px;font-weight:600;letter-spacing:0.5px;background:${typeBg};color:${typeColor};padding:2px 6px;border-radius:999px;white-space:nowrap;flex-shrink:0;">${typeLabel}</span>
               ${j.interesting_score ? `<span style="font-size:10px;font-weight:700;color:${scoreColor};white-space:nowrap;flex-shrink:0;">${j.interesting_score}/10</span>` : ''}
             </div>
+            <div style="font-size:12px;font-weight:500;color:#1f2937;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${escHtml(j.title)}</div>
             <div style="font-size:11px;color:#9ca3af;margin-top:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${escHtml(j.organization || '')}${j.deadline ? ' · ' + escHtml(j.deadline) : ''}</div>
             ${j.interesting_reason ? `<div style="font-size:10px;color:#6b7280;margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.4;">${escHtml(j.interesting_reason)}</div>` : ''}
           </div>`;
