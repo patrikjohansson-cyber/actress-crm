@@ -649,7 +649,10 @@
     </button>
   </nav>
 
-  <div id="sidebar-footer">Actress CRM · v2</div>
+  <div id="sidebar-footer">
+    <div>Actress CRM · v2</div>
+    <div id="deploy-status" style="margin-top:4px;font-size:8px;opacity:0.7;">…</div>
+  </div>
 </aside>
 
 <!-- Main content -->
@@ -667,12 +670,6 @@
 
     <div class="view-body">
 
-      <!-- Stipendienyheter -->
-      <div id="dash-stipend-news-wrap" style="margin-bottom:32px;">
-        <div class="section-heading">Stipendienyheter i ditt nätverk</div>
-        <div id="dash-stipend-news" class="space-y"></div>
-      </div>
-
       <!-- Row 1: Deadlines + Sparade -->
       <div class="grid-2" style="margin-bottom:32px;">
         <div>
@@ -685,32 +682,8 @@
         </div>
       </div>
 
-      <!-- Row 2: Senaste fynd + Tumme upp -->
-      <div class="grid-2" style="margin-bottom:32px;">
-        <div>
-          <div class="section-heading">Senaste intressanta fynd</div>
-          <div id="dash-finds" class="space-y-sm"></div>
-        </div>
-        <div>
-          <div class="section-heading">Dina tumme upp</div>
-          <div id="dash-liked" class="space-y-sm"></div>
-        </div>
-      </div>
-
-      <!-- Row 3: Branschviktiga + Övriga att följa upp -->
-      <div class="grid-2" style="margin-bottom:32px;">
-        <div>
-          <div class="section-heading">Branschviktiga — dags att höra av sig</div>
-          <div id="dash-industry-star" class="space-y-sm"></div>
-        </div>
-        <div>
-          <div class="section-heading">Övriga att följa upp</div>
-          <div id="dash-followup" class="space-y-sm"></div>
-        </div>
-      </div>
-
-      <!-- Möjligheter -->
-      <div style="border-top:1px solid var(--rule);padding-top:24px;">
+      <!-- Row 2: Senaste möjligheter -->
+      <div style="margin-bottom:32px;">
         <div class="flex-between" style="margin-bottom:16px;">
           <div class="section-heading" style="margin-bottom:0;border-bottom:none;padding-bottom:0;">Senaste möjligheter</div>
           <button onclick="showView('discover')" class="btn btn-ghost btn-sm">Visa alla →</button>
@@ -729,6 +702,40 @@
             <div id="dash-opp-grants" class="space-y-sm"></div>
           </div>
         </div>
+      </div>
+
+      <!-- Row 3: Senaste fynd + Tumme upp -->
+      <div class="grid-2" style="margin-bottom:32px;">
+        <div>
+          <div class="section-heading">Senaste intressanta fynd</div>
+          <div id="dash-finds" class="space-y-sm"></div>
+        </div>
+        <div>
+          <div class="section-heading">Dina tumme upp</div>
+          <div id="dash-liked" class="space-y-sm"></div>
+        </div>
+      </div>
+
+      <!-- Row 4: Branschviktiga + Övriga + Oanalyserad e-post -->
+      <div class="grid-3" style="margin-bottom:32px;">
+        <div>
+          <div class="section-heading">Branschviktiga</div>
+          <div id="dash-industry-star" class="space-y-sm"></div>
+        </div>
+        <div>
+          <div class="section-heading">Övriga att följa upp</div>
+          <div id="dash-followup" class="space-y-sm"></div>
+        </div>
+        <div>
+          <div class="section-heading">Oanalyserad e-post</div>
+          <div id="dash-unparsed-emails" class="space-y-sm"></div>
+        </div>
+      </div>
+
+      <!-- Row 5: Stipendienyheter -->
+      <div id="dash-stipend-news-wrap" style="margin-bottom:32px;">
+        <div class="section-heading">Stipendienyheter i ditt nätverk</div>
+        <div id="dash-stipend-news" class="space-y"></div>
       </div>
 
     </div>
@@ -794,7 +801,7 @@
       </div>
 
       <div id="contactsGrid"></div>
-      <div id="contactsList" class="hidden"></div>
+      <div id="contactsList" style="display:none;flex-direction:column;gap:8px;"></div>
     </div>
   </div>
 
@@ -855,7 +862,7 @@
       </div>
 
       <div id="projectsGrid"></div>
-      <div id="projectsList" class="hidden"></div>
+      <div id="projectsList" style="display:none;flex-direction:column;gap:8px;"></div>
     </div>
   </div>
 
@@ -1800,7 +1807,10 @@ async function loadDashboard() {
           const until = daysUntil(item.deadline);
           const urgent = new Date(item.deadline) - new Date() < 7 * 86400000;
           return `<div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-3 flex items-center justify-between gap-2">
-            <div class="min-w-0">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5 mb-0.5">
+                <span class="text-xs px-1.5 py-0.5 rounded ${typeCls[item.type] || 'bg-gray-50 text-gray-500'}">${typeLabel[item.type] || item.type}</span>
+              </div>
               <div class="text-sm font-medium text-gray-900 truncate">${escHtml(item.title)}</div>
               <div class="text-xs text-gray-400 truncate">${escHtml(item.organization || '')}</div>
             </div>
@@ -1926,6 +1936,21 @@ async function loadDashboard() {
           <span class="text-xs text-gray-400 shrink-0">${daysAgoStr(c.days_since)}</span>
         </div>`).join('')
       : '<p class="text-xs text-gray-400 py-2">Inga uppföljningar behövs just nu 🎉</p>';
+
+    // 📧 Oanalyserad e-post
+    const unparsed = d.unparsedEmailContacts || [];
+    document.getElementById('dash-unparsed-emails').innerHTML = unparsed.length
+      ? unparsed.map(c => `
+        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-3 flex items-center gap-3 hover:border-amber-300 cursor-pointer"
+             onclick="openContactPanel(${c.id})">
+          ${avatar(c.name, 8, c.photo_url)}
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-sm text-gray-900 truncate">${escHtml(c.name)}</div>
+            <div class="text-xs text-gray-500 truncate">${[c.role, c.organization].filter(Boolean).join(' · ')}</div>
+          </div>
+          <span class="shrink-0 text-xs font-semibold text-amber-500">${c.email_count} mail</span>
+        </div>`).join('')
+      : '<p class="text-xs text-gray-400 py-2">All e-post är analyserad ✓</p>';
 
     // 🔍 Senaste möjligheter
     loadDashboardOpportunities();
@@ -2326,7 +2351,10 @@ function renderContacts(contacts, orgs = [], contactJobs = {}, contactStipends =
   if (listEl) {
     listEl.innerHTML = contacts.map(c => {
       const roles = (() => { try { return JSON.parse(c.roles || '[]'); } catch { return []; } })();
-      return `<div onclick="openContactPanel(${c.id})" style="display:flex;align-items:center;gap:16px;padding:10px 0;border-bottom:1px solid var(--rule);cursor:pointer;" onmouseover="this.style.background='var(--paper-alt)'" onmouseout="this.style.background=''">
+      return `<div onclick="openContactPanel(${c.id})"
+        style="display:flex;align-items:center;gap:16px;padding:12px 16px;background:#fff;border-radius:999px;border:1px solid #f0ece4;box-shadow:0 1px 3px rgba(0,0,0,0.06);cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;"
+        onmouseover="this.style.borderColor='#fca5a5';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'"
+        onmouseout="this.style.borderColor='#f0ece4';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.06)'">
         ${avatar(c.name, 8, c.photo_url)}
         <div style="flex:1;min-width:0;">
           <div style="font-family:var(--font-serif);font-size:15px;color:var(--ink);">${escHtml(c.name)}</div>
@@ -2352,8 +2380,8 @@ function setContactsView(mode) {
   document.getElementById('contacts-view-list').style.color = mode === 'list' ? 'var(--paper)' : 'var(--soft)';
   const grid = document.getElementById('contactsGrid');
   const list = document.getElementById('contactsList');
-  if (mode === 'grid') { grid.classList.remove('hidden'); list.classList.add('hidden'); }
-  else { grid.classList.add('hidden'); list.classList.remove('hidden'); }
+  if (mode === 'grid') { grid.classList.remove('hidden'); list.style.display = 'none'; }
+  else { grid.classList.add('hidden'); list.style.display = 'flex'; }
   loadContacts();
 }
 
@@ -3699,6 +3727,23 @@ function renderProjects(projects) {
         ${p.own_work ? `<span class="text-rose-500 font-medium">Eget projekt</span>` : ''}
       </div>
     </div>`).join('');
+
+  const listEl = document.getElementById('projectsList');
+  if (listEl) {
+    listEl.innerHTML = sorted.map(p => `
+      <div onclick="openProjectPanel(${p.id})"
+        style="display:flex;align-items:center;gap:16px;padding:12px 16px;background:#fff;border-radius:999px;border:1px solid #f0ece4;box-shadow:0 1px 3px rgba(0,0,0,0.06);cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;"
+        onmouseover="this.style.borderColor='#fca5a5';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'"
+        onmouseout="this.style.borderColor='#f0ece4';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.06)'">
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:var(--font-serif);font-size:15px;color:var(--ink);">${escHtml(p.title)}</div>
+          ${p.organization ? `<div style="font-size:11px;color:var(--soft);">${escHtml(p.organization)}</div>` : ''}
+        </div>
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--soft);letter-spacing:1px;text-transform:uppercase;">${p.type || ''}</div>
+        ${p.start_date ? `<div style="font-family:var(--font-mono);font-size:9px;color:var(--soft);letter-spacing:1px;white-space:nowrap;">${fmtDate(p.start_date)}</div>` : ''}
+        ${statusBadge(p.status)}
+      </div>`).join('');
+  }
 }
 
 let projectsViewMode = 'grid';
@@ -3711,8 +3756,8 @@ function setProjectsView(mode) {
   // toggle visibility
   const gridEl = document.getElementById('projectsGrid');
   const listEl = document.getElementById('projectsList');
-  if (mode === 'grid') { gridEl.classList.remove('hidden'); listEl.classList.add('hidden'); }
-  else { gridEl.classList.add('hidden'); listEl.classList.remove('hidden'); }
+  if (mode === 'grid') { gridEl.classList.remove('hidden'); listEl.style.display = 'none'; }
+  else { gridEl.classList.add('hidden'); listEl.style.display = 'flex'; }
   loadProjects?.();
 }
 
@@ -4093,7 +4138,8 @@ async function enrichProject(id) {
       castSection.dataset.cast = JSON.stringify(info.cast);
       castList.innerHTML = info.cast.map(person => renderCastPersonRow(id, person)).join('');
     }
-    toast('Info hittad! Granska och spara.');
+    const foundSomething = info.organization || info.director || info.description || info.cast?.length;
+    toast(foundSomething ? 'Info hittad! Granska och spara.' : 'Ingen information hittades.', foundSomething ? 'success' : 'warning');
   } catch (e) {
     toast(e.message, 'error');
   }
@@ -6901,6 +6947,24 @@ async function updateProfileCompleteness() {
 loadDashboard();
 initSearchTags();
 updateProfileCompleteness();
+
+// ── Railway deploy-status ─────────────────────────────────────
+(async () => {
+  const el = document.getElementById('deploy-status');
+  if (!el) return;
+  try {
+    const d = await api('GET', '/api/deploy-status');
+    if (d.error === 'ej konfigurerat') { el.textContent = ''; return; }
+    if (!d.deployedAt) { el.textContent = 'deploy: okänd'; return; }
+    const dt = new Date(d.deployedAt);
+    const diff = Math.floor((Date.now() - dt) / 60000);
+    const when = diff < 60 ? `${diff} min sedan`
+      : diff < 1440 ? `${Math.floor(diff/60)} h sedan`
+      : `${Math.floor(diff/1440)} d sedan`;
+    el.textContent = `✓ deploy ${when}`;
+    el.title = dt.toLocaleString('sv-SE');
+  } catch { el.textContent = ''; }
+})();
 
 // ── Berika grupp ──────────────────────────────────────────────
 let _bulkEnrichAbort = false;

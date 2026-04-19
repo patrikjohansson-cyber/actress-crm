@@ -410,11 +410,22 @@ module.exports = {
         CAST(julianday('now') - julianday(MAX(i.date)) AS INTEGER) as days_since
       FROM contacts c
       LEFT JOIN interactions i ON c.id = i.contact_id
-      WHERE (c.industry_star = 0 OR c.industry_star IS NULL) AND c.priority >= 5
+      WHERE (c.industry_star = 0 OR c.industry_star IS NULL) AND c.priority >= 5 AND c.priority < 10
       GROUP BY c.id
-      HAVING last_contact IS NULL OR days_since >= 30
+      HAVING last_contact IS NOT NULL AND days_since >= 30
       ORDER BY days_since DESC, c.priority ASC
       LIMIT 6
+    `).all();
+
+    const unparsedEmailContacts = db.prepare(`
+      SELECT c.id, c.name, c.role, c.organization, c.photo_url,
+        COUNT(e.id) as email_count
+      FROM contacts c
+      JOIN emails e ON e.matched_contact = c.id
+      WHERE e.parsed = 0
+      GROUP BY c.id
+      ORDER BY email_count DESC, c.name ASC
+      LIMIT 10
     `).all();
 
     const contactStipendNews = db.prepare(`
@@ -427,7 +438,14 @@ module.exports = {
       LIMIT 10
     `).all();
 
-    return { upcomingDeadlines, savedItems, likedItems, latestFinds, industryStarFollowup, needsFollowup, contactStipendNews };
+    return { upcomingDeadlines, savedItems, likedItems, latestFinds, industryStarFollowup, needsFollowup, contactStipendNews, unparsedEmailContacts };
+  },
+
+  getDashboardOpportunities() {
+    const jobs    = db.prepare('SELECT id, title, organization, deadline, url FROM job_listings ORDER BY found_at DESC LIMIT 5').all();
+    const stipends = db.prepare('SELECT id, person_name, organization, year, url FROM stipend_findings ORDER BY found_at DESC LIMIT 5').all();
+    const grants  = db.prepare('SELECT id, title, organization, deadline, amount, url FROM grant_calls ORDER BY found_at DESC LIMIT 5').all();
+    return { jobs, stipends, grants };
   },
 
   // ── Emails ─────────────────────────────────────────────────

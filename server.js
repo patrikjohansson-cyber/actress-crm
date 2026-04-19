@@ -298,10 +298,46 @@ app.post('/api/projects/:id/enrich', async (req, res) => {
   if (!project) return res.status(404).json({ error: 'Projekt saknas' });
   try {
     const links = (() => { try { return JSON.parse(project.links || '[]'); } catch { return []; } })();
-    const linkHint = links.length ? `\nSök SPECIFIKT på dessa sidor:\n${links.map(l => l.url).join('\n')}` : '';
-    const contextHint = project.context_info ? `\nExtra info om produktionen:\n${project.context_info}` : '';
+    const hasContext = (project.context_info || '').trim().length > 50;
 
-    const prompt = `Sök information om produktionen "${project.title}"${project.organization ? ' av ' + project.organization : ''} inom svensk teater, film eller scenkonstvärlden.${linkHint}${contextHint}
+    // Skrapa länkarna och hämta sidinnehållet som text
+    const scrapedPages = await Promise.all(links.map(async (l) => {
+      try {
+        const r = await fetch(ensureHttps(l.url), { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) });
+        if (!r.ok) return null;
+        const html = await r.text();
+        const $ = cheerio.load(html);
+        $('script, style, nav, footer, header, [aria-hidden="true"]').remove();
+        const text = $('body').text().replace(/\s+/g, ' ').trim().slice(0, 3000);
+        return text ? { url: l.url, label: l.label || '', text } : null;
+      } catch { return null; }
+    }));
+    const validPages = scrapedPages.filter(Boolean);
+
+    // Känd info från projektkortet
+    const knownLines = [
+      project.type        ? `Typ: ${project.type}` : '',
+      project.start_date  ? `Startdatum: ${project.start_date}` : '',
+      project.end_date    ? `Slutdatum: ${project.end_date}` : '',
+      project.director    ? `Regissör: ${project.director}` : '',
+      project.venue       ? `Scen/plats: ${project.venue}` : '',
+      project.notes       ? `Anteckningar: ${project.notes}` : '',
+    ].filter(Boolean);
+
+    const knownSection   = knownLines.length ? `\nKänd info:\n${knownLines.join('\n')}` : '';
+    const pagesSection   = validPages.length
+      ? '\n\n' + validPages.map(p => `SIDA: ${p.url}${p.label ? ` (${p.label})` : ''}\n---\n${p.text}\n---`).join('\n\n')
+      : '';
+    const contextSection = hasContext
+      ? `\n\nÖVRIGT MATERIAL (intervju, presstext o.liknande):\n---\n${project.context_info}\n---`
+      : '';
+
+    const hasMaterial = validPages.length > 0 || hasContext;
+    const instruction = hasMaterial
+      ? 'Extrahera information ur materialet nedan om produktionen'
+      : 'Sök information om produktionen på webben';
+
+    const prompt = `${instruction}: "${project.title}"${project.organization ? ' av ' + project.organization : ''} (svensk teater, film eller scenkonst).${knownSection}${pagesSection}${contextSection}
 
 Svara ENBART med JSON:
 {
@@ -314,20 +350,21 @@ Svara ENBART med JSON:
   "num_performances": "t.ex. 24 föreställningar eller speltid",
   "description": "beskrivning av produktionen (2-4 meningar)",
   "cast": [{"name": "Förnamn Efternamn", "role": "titel/roll i produktionen"}],
-  "sources": ["url1"]
+  "sources": ["url där info hittades"]
 }
 
 Försök hitta regissör, scen och så många medverkande som möjligt. Om inget hittas, returnera tomma strängar/arrayer. Svara ENBART med JSON.`;
-    const text = await claudeSearch(prompt, 1500, 'claude-haiku-4-5-20251001');
+
+    const useWebSearch = !hasMaterial;
+    const text = await claudeSearch(prompt, 4000, 'claude-sonnet-4-6', useWebSearch);
+    console.log('[enrich project] råsvar:', text?.slice(0, 500));
     let info = {};
     try {
-      const m = text.match(/\{[\s\S]*\}/);
-      info = JSON.parse(m ? m[0] : '{}');
-    } catch { info = {}; }
-
-    // Läs befintlig ai_data för att kunna slå ihop
-    const existingAiData = (() => { try { return JSON.parse(project.ai_data || '{}'); } catch { return {}; } })();
-    const existingCast = existingAiData.cast || [];
+      const m = text.match(/\{[\s\S]*?\}/s) || text.match(/\{[\s\S]*\}/);
+      if (m) info = JSON.parse(m[0]);
+    } catch (e) {
+      console.warn('[enrich project] JSON-parsning misslyckades:', e.message, '| text:', text?.slice(0, 300));
+    }
 
     // Separera Jonnas info från övrig cast
     const jonnaName = (db.getJonnaKey('full_name') || '').toLowerCase();
@@ -349,24 +386,21 @@ Försök hitta regissör, scen och så många medverkande som möjligt. Om inget
       }
     }
 
-    // Slå ihop cast – lägg till nya personer, behåll befintliga
-    const mergedCastMap = new Map(existingCast.map(p => [p.name.toLowerCase(), p]));
+    // Bygg på befintlig data — slå ihop cast och fyll tomma fält
+    const existingAiData = (() => { try { return JSON.parse(project.ai_data || '{}'); } catch { return {}; } })();
+    const mergedCastMap = new Map((existingAiData.cast || []).map(p => [p.name.toLowerCase(), p]));
     for (const p of newCast) {
       if (!mergedCastMap.has(p.name.toLowerCase())) mergedCastMap.set(p.name.toLowerCase(), p);
     }
-    const mergedCast = [...mergedCastMap.values()];
-
-    // Slå ihop övrig data – fyll bara i tomma fält, slå ihop arrayer
     const mergedSources = [...new Set([...(existingAiData.sources || []), ...(info.sources || [])])];
     const mergedInfo = { ...existingAiData, ...Object.fromEntries(
       Object.entries(info).filter(([k, v]) => v && !existingAiData[k] && k !== 'sources' && k !== 'cast')
-    ), cast: mergedCast, sources: mergedSources };
+    ), cast: [...mergedCastMap.values()], sources: mergedSources };
 
-    // Spara Jonnas roll + nya fält om hittade (skriv inte över befintliga)
     const projectUpdate = { ai_data: JSON.stringify(mergedInfo) };
     if (jonnaInCast?.role && !project.jonna_role) projectUpdate.jonna_role = jonnaInCast.role;
-    if (info.director && !project.director) projectUpdate.director = info.director;
-    if (info.venue && !project.venue) projectUpdate.venue = info.venue;
+    if (info.director && !project.director)               projectUpdate.director = info.director;
+    if (info.venue && !project.venue)                     projectUpdate.venue = info.venue;
     if (info.num_performances && !project.num_performances) projectUpdate.num_performances = info.num_performances;
 
     db.updateProject(req.params.id, projectUpdate);
@@ -786,6 +820,31 @@ app.get('/api/network', (req, res) => {
   res.json(db.getNetworkData());
 });
 
+app.get('/api/deploy-status', async (req, res) => {
+  const token = process.env.RAILWAY_TOKEN;
+  const serviceId = process.env.RAILWAY_SERVICE_ID;
+  if (!token || !serviceId) return res.json({ status: null, deployedAt: null, error: 'ej konfigurerat' });
+  try {
+    const gql = `query {
+      deployments(input: { serviceId: "${serviceId}", status: SUCCESS }, first: 1) {
+        edges { node { id status createdAt } }
+      }
+    }`;
+    const r = await fetch('https://backboard.railway.app/graphql/v2', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ query: gql }),
+      signal: AbortSignal.timeout(6000),
+    });
+    const data = await r.json();
+    const node = data?.data?.deployments?.edges?.[0]?.node;
+    if (!node) return res.json({ status: null, deployedAt: null });
+    res.json({ status: node.status, deployedAt: node.createdAt });
+  } catch (e) {
+    res.json({ status: null, deployedAt: null, error: e.message });
+  }
+});
+
 app.get('/api/dashboard', (req, res) => {
   res.json(db.getDashboard());
 });
@@ -800,10 +859,7 @@ app.get('/api/discover/status', (req, res) => {
 });
 
 app.get('/api/dashboard/opportunities', (req, res) => {
-  const jobs = db.prepare('SELECT id, title, organization, deadline, url FROM job_listings ORDER BY found_at DESC LIMIT 5').all();
-  const stipends = db.prepare('SELECT id, person_name, organization, year, url FROM stipend_findings ORDER BY found_at DESC LIMIT 5').all();
-  const grants = db.prepare('SELECT id, title, organization, deadline, amount, url FROM grant_calls ORDER BY found_at DESC LIMIT 5').all();
-  res.json({ jobs, stipends, grants });
+  res.json(db.getDashboardOpportunities());
 });
 
 // ── AI: suggest followup ───────────────────────────────────────
@@ -1657,10 +1713,12 @@ app.post('/api/contacts/:id/fetch-photo', async (req, res) => {
   };
 
   try {
-    // Steg 1: Skrapa hemsida och URL:er från anteckningar
+    // Steg 1: Skrapa hemsida, URL:er från anteckningar och AI-hittade källor
     const notesText = contact.notes || '';
     const urlsInNotes = [...notesText.matchAll(/https?:\/\/[^\s)>\]"]+/g)].map(m => m[0]).slice(0, 3);
-    const urlsToScrape = [contact.website, ...urlsInNotes].filter(Boolean).map(ensureHttps);
+    const enrichment = (() => { try { return JSON.parse(contact.enrichment_data || '{}'); } catch { return {}; } })();
+    const enrichmentSources = (enrichment.sources || []).filter(u => typeof u === 'string' && u.startsWith('http')).slice(0, 5);
+    const urlsToScrape = [...new Set([contact.website, ...urlsInNotes, ...enrichmentSources].filter(Boolean).map(ensureHttps))];
     const firstName = contact.name.split(' ')[0].toLowerCase();
 
     const toAbs = (src, base) => { try { return src.startsWith('http') ? src : new URL(src, base).href; } catch { return null; } };
@@ -1734,14 +1792,41 @@ app.post('/api/contacts/:id/fetch-photo', async (req, res) => {
 
     // Steg 2: Fallback — web search med Claude
     if (!photoResult) {
-      const desc = [contact.name, contact.role, contact.organization].filter(Boolean).join(', ');
-      const prompt = `Hitta EN porträttbild (ansikte/överkropp) på personen: ${desc}.
-Sök på teaterns hemsida, IMDB, SVT, Dramaten, Riksteatern eller liknande.
-Bilden ska föreställa PERSONEN — inte en logotyp, ikon, Instagram-logo, LinkedIn-logo eller annat grafiskt element.
-Svara ENBART med en JSON-rad: {"url":"https://...","source":"var du hittade den"}
-Hittar du ingen porträttbild på personen, svara: {"url":null,"source":""}
-Returnera bara EN URL. Sluta söka när du hittat en riktig porträttbild.`;
-      const text = await claudeSearch(prompt, 500, 'claude-sonnet-4-6', true);
+      const orgName = contact.organization || (enrichment.organization) || '';
+      const tags = (() => { try { return JSON.parse(contact.tags || '[]'); } catch { return []; } })();
+      const bio = enrichment.bio ? enrichment.bio.slice(0, 200) : '';
+      const website = contact.website || '';
+
+      const contextLines = [
+        `Namn: ${contact.name}`,
+        contact.role ? `Roll/yrke: ${contact.role}` : '',
+        orgName ? `Organisation/arbetsgivare: ${orgName}` : '',
+        website ? `Hemsida: ${website}` : '',
+        tags.length ? `Taggar: ${tags.join(', ')}` : '',
+        bio ? `Bio: ${bio}` : '',
+      ].filter(Boolean).join('\n');
+
+      const prompt = `Du ska hitta en porträttbild på en person. Här är all information du har:
+
+${contextLines}
+
+Sök systematiskt i denna ordning:
+1. Om organisation är känd — sök på organisationens hemsida efter en personalsida eller "ensemble"-sida (t.ex. dramaten.se, riksteatern.se, stadsteatern.se, operan.se, malmostadsteater.se, goteborgsteatern.se, svt.se, filminstitut.se)
+2. Sök på "[namn] [organisation] porträtt" eller "[namn] skådespelare"
+3. Prova IMDB om personen är skådespelare/regissör
+4. Prova sceneweb.se (skandinavisk teaterportal)
+5. Sök på "[namn] site:[organisation-domän]" om du vet domänen
+
+Bilden MÅSTE föreställa personen (ansikte/överkropp) — inte logotyp, ikon, bakgrundsbild eller grafik.
+Direktlänken ska peka mot en bildfil (.jpg, .jpeg, .png, .webp) eller ett <img>-element på sidan.
+
+Svara ENBART med ett JSON-objekt på en rad:
+{"url":"https://...","source":"sajt eller URL där du hittade bilden"}
+
+Hittade du ingen bra bild, svara:
+{"url":null,"source":""}`;
+
+      const text = await claudeSearch(prompt, 2000, 'claude-sonnet-4-6', true);
       const m = text.match(/\{[^}]+\}/);
       if (m) {
         const parsed = JSON.parse(m[0]);
