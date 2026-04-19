@@ -753,6 +753,7 @@
         </div>
         <div class="masthead-actions" style="margin-top:0;">
           <button onclick="openAiRankModal()" class="btn btn-ghost btn-sm">AI-ranka branschvikt</button>
+          <button onclick="bulkMatchEmails()" class="btn btn-ghost btn-sm">Koppla alla mejl</button>
           <button onclick="openBulkEnrichModal()" class="btn btn-ghost btn-sm">Berika grupp</button>
           <button onclick="findDuplicates()" class="btn btn-ghost btn-sm">Hitta dubletter</button>
           <button onclick="openNewContactPanel()" class="btn btn-accent">+ Ny kontakt</button>
@@ -3174,6 +3175,21 @@ async function analyzeEmailsForContact(id, btn) {
     btn.disabled = false;
     btn.textContent = 'Analysera mejl';
   }
+}
+
+async function bulkMatchEmails() {
+  const contacts = await api('GET', '/api/contacts?limit=9999');
+  const withEmail = contacts.filter(c => c.email);
+  if (!withEmail.length) { toast('Inga kontakter med e-postadress hittades.', 'info'); return; }
+  let totalMatched = 0;
+  for (const c of withEmail) {
+    try {
+      const { matched } = await api('POST', `/api/contacts/${c.id}/match-emails`);
+      totalMatched += matched || 0;
+    } catch {}
+  }
+  toast(`Klar! ${totalMatched} mejl kopplades till ${withEmail.length} kontakter.`);
+  loadContacts();
 }
 
 async function matchEmailsForContact(id, btn) {
