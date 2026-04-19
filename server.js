@@ -432,9 +432,18 @@ app.post('/api/projects/:id/press', async (req, res) => {
     const linkHint = links.length ? `\nSök SPECIFIKT även på dessa sidor:\n${links.map(l => l.url).join('\n')}` : '';
     const contextHint = project.context_info ? `\nExtra info: ${project.context_info}` : '';
 
-    const prompt = `Sök efter pressrecensioner, tidningsartiklar och kritik om föreställningen/produktionen "${project.title}"${project.organization ? ' av ' + project.organization : ''}${project.start_date ? ' (' + project.start_date + ')' : ''} i Sverige.${linkHint}${contextHint}
+    // Hämta kopplade kontakters namn för att stärka sökningen
+    const projectContacts = db.getProjectContacts(req.params.id) || [];
+    const actorNames = projectContacts.slice(0, 5).map(c => c.name).join(', ');
+    const actorHint = actorNames ? `\nMedverkande: ${actorNames}` : '';
 
-Sök i Dagens Nyheter, Svenska Dagbladet, Göteborgs-Posten, Dagens Teater, Scen & Film, lokaltidningar och andra svenska medier.
+    const searchTitle = `"${project.title}" teaterföreställning${project.organization ? ' ' + project.organization : ''}`;
+
+    const prompt = `Sök efter pressrecensioner, tidningsartiklar och nyheter om teaterföreställningen "${project.title}"${project.organization ? ' av ' + project.organization : ''}${project.start_date ? ' (' + project.start_date.slice(0,4) + ')' : ''} i Sverige.${actorHint}${linkHint}${contextHint}
+
+VIKTIGT: Sök med söktermerna ${searchTitle} — lägg alltid till "teater" eller "föreställning" för att undvika förväxling med andra betydelser av titeln.
+
+Sök i SVT Nyheter (svt.se/nyheter/lokalt), Dagens Nyheter, Svenska Dagbladet, Göteborgs-Posten, Dagens Teater, Scen & Film, regionala tidningar (VLT, NWT, Barometern m.fl.) och andra svenska medier.
 
 Svara ENBART med JSON:
 {
