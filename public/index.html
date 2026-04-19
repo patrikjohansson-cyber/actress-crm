@@ -3788,6 +3788,7 @@ function renderProjects(projects) {
       ${p.type ? `<div class="text-xs text-gray-500 mb-1">${p.type}</div>` : ''}
       ${p.organization ? `<div class="text-xs text-gray-400">${p.organization}</div>` : ''}
       ${p.director ? `<div class="text-xs text-gray-400">Regi: ${escHtml(p.director)}</div>` : ''}
+      ${p.description ? `<div class="text-xs text-gray-500 mt-2 leading-relaxed" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">${escHtml(p.description)}</div>` : ''}
       <div class="flex gap-3 mt-3 text-xs text-gray-400">
         ${p.start_date ? `<span>${fmtDate(p.start_date)}</span>` : ''}
         ${p.own_work ? `<span class="text-rose-500 font-medium">Eget projekt</span>` : ''}
