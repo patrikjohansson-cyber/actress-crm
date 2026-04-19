@@ -6964,15 +6964,18 @@ updateProfileCompleteness();
   try {
     const d = await api('GET', '/api/deploy-status');
     if (d.error === 'ej konfigurerat') { el.textContent = ''; return; }
+    if (d.error) { el.textContent = `deploy: fel (${d.error})`; return; }
     if (!d.deployedAt) { el.textContent = 'deploy: okänd'; return; }
     const dt = new Date(d.deployedAt);
     const diff = Math.floor((Date.now() - dt) / 60000);
     const when = diff < 60 ? `${diff} min sedan`
       : diff < 1440 ? `${Math.floor(diff/60)} h sedan`
       : `${Math.floor(diff/1440)} d sedan`;
-    el.textContent = `✓ deploy ${when}`;
-    el.title = dt.toLocaleString('sv-SE');
-  } catch { el.textContent = ''; }
+    const ok = d.status === 'SUCCESS';
+    el.textContent = `${ok ? '✓' : '⚠'} deploy ${when}`;
+    el.style.color = ok ? '' : '#e67e22';
+    el.title = `${d.status} · ${dt.toLocaleString('sv-SE')}`;
+  } catch (e) { el.textContent = `deploy: ${e.message}`; }
 })();
 
 // ── Berika grupp ──────────────────────────────────────────────

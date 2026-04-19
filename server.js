@@ -838,8 +838,9 @@ app.get('/api/deploy-status', async (req, res) => {
   const serviceId = process.env.RAILWAY_SERVICE_ID;
   if (!token || !serviceId) return res.json({ status: null, deployedAt: null, error: 'ej konfigurerat' });
   try {
+    // Hämta senaste 5 deployments utan statusfilter, filtrera SUCCESS på vår sida
     const gql = `query {
-      deployments(input: { serviceId: "${serviceId}", status: SUCCESS }, first: 1) {
+      deployments(input: { serviceId: "${serviceId}" }, first: 5) {
         edges { node { id status createdAt } }
       }
     }`;
@@ -850,10 +851,17 @@ app.get('/api/deploy-status', async (req, res) => {
       signal: AbortSignal.timeout(6000),
     });
     const data = await r.json();
-    const node = data?.data?.deployments?.edges?.[0]?.node;
+    if (data.errors) {
+      console.error('[deploy-status] Railway GQL fel:', JSON.stringify(data.errors));
+      return res.json({ status: null, deployedAt: null, error: data.errors[0]?.message });
+    }
+    const edges = data?.data?.deployments?.edges || [];
+    const success = edges.find(e => e.node.status === 'SUCCESS');
+    const node = success?.node || edges[0]?.node;
     if (!node) return res.json({ status: null, deployedAt: null });
     res.json({ status: node.status, deployedAt: node.createdAt });
   } catch (e) {
+    console.error('[deploy-status]', e.message);
     res.json({ status: null, deployedAt: null, error: e.message });
   }
 });
