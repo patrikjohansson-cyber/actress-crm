@@ -1698,9 +1698,28 @@ app.post('/api/contacts/:id/fetch-photo', async (req, res) => {
     if (!imgResp.ok) return null;
     const contentType = imgResp.headers.get('content-type') || '';
     if (!contentType.startsWith('image/')) return null;
-    const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
+    if (contentType.includes('png') || imgUrl.match(/\.png(\?|$)/i)) return null; // PNG = nästan aldrig porträtt
+    const ext = contentType.includes('webp') ? 'webp' : 'jpg';
     const buffer = Buffer.from(await imgResp.arrayBuffer());
-    if (buffer.length < 8000) return null; // för liten = logga/ikon
+    if (buffer.length < 8000) return null;
+
+    // Claude vision — kontrollera att bilden föreställer en person
+    try {
+      const base64 = buffer.toString('base64');
+      const check = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 20,
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: contentType, data: base64 } },
+          { type: 'text', text: 'Is there a real human face or person visible in this image? Answer only YES or NO.' }
+        ]}],
+      });
+      const answer = check.content[0]?.text?.trim().toUpperCase() || '';
+      if (!answer.startsWith('YES')) return null;
+    } catch (e) {
+      console.warn('[fetch-photo vision check]', e.message);
+    }
+
     const filename = `${req.params.id}-ai-${Date.now()}.${ext}`;
     fs.writeFileSync(path.join(uploadsDir, filename), buffer);
     return `/uploads/${filename}`;
