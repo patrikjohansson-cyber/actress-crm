@@ -942,6 +942,20 @@ app.post('/api/admin/boost-badge-priority', (req, res) => {
   res.json({ updated: updated.length, contacts: updated });
 });
 
+// ── ENGÅNG: Höj prioritet till 4 för kontakter med organisation och prioritet < 4 ──
+app.post('/api/admin/boost-org-priority', (req, res) => {
+  const contacts = db.getContacts({});
+  const updated = [];
+  for (const c of contacts) {
+    if ((c.priority || 5) >= 4) continue;
+    if (c.organization || c.org_names) {
+      db.updateContact(c.id, { priority: 4 });
+      updated.push({ id: c.id, name: c.name, was: c.priority || 5, org: c.organization || c.org_names });
+    }
+  }
+  res.json({ updated: updated.length, contacts: updated });
+});
+
 app.get('/api/network', (req, res) => {
   res.json(db.getNetworkData());
 });
